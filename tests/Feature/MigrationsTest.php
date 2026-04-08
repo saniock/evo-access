@@ -27,4 +27,13 @@ class MigrationsTest extends TestCase
         $this->assertNotNull($row);
         $this->assertSame(1, (int) $row->is_system);
     }
+
+    public function test_ea_permissions_table_exists_with_required_columns(): void
+    {
+        $this->assertTrue(Schema::hasTable('ea_permissions'));
+        $this->assertTrue(Schema::hasColumns('ea_permissions', [
+            'id', 'name', 'label', 'module', 'actions',
+            'is_orphaned', 'created_at', 'updated_at',
+        ]));
+    }
 }
