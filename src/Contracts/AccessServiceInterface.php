@@ -20,6 +20,15 @@ interface AccessServiceInterface
     public function can(string $permission, string $action, int $userId): bool;
 
     /**
+     * Assert that the user can perform $action on $permission.
+     *
+     * Throws AccessDeniedException if not allowed.
+     *
+     * @throws \Saniock\EvoAccess\Exceptions\AccessDeniedException
+     */
+    public function authorize(string $permission, string $action, int $userId): void;
+
+    /**
      * Shorthand: can the user view the section identified by $actionId
      * in the given (module-local) menu tree?
      */

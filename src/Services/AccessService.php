@@ -3,6 +3,7 @@
 namespace Saniock\EvoAccess\Services;
 
 use Saniock\EvoAccess\Contracts\AccessServiceInterface;
+use Saniock\EvoAccess\Exceptions\AccessDeniedException;
 
 /**
  * Main entry point for access checks.
@@ -25,8 +26,19 @@ class AccessService implements AccessServiceInterface
 
     public function can(string $permission, string $action, int $userId): bool
     {
-        // TODO: delegate to $this->resolver->userHas($userId, $permission, $action);
-        return false;
+        return $this->resolver->userHas($userId, $permission, $action);
+    }
+
+    public function authorize(string $permission, string $action, int $userId): void
+    {
+        if (!$this->can($permission, $action, $userId)) {
+            throw new AccessDeniedException(
+                "Access denied: user $userId cannot $action on $permission",
+                permission: $permission,
+                action: $action,
+                userId: $userId,
+            );
+        }
     }
 
     public function canView(array $menu, string $actionId, int $userId): bool
