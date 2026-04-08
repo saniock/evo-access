@@ -43,6 +43,22 @@ interface PermissionCatalogInterface
     public function find(string $name): ?array;
 
     /**
+     * Permissions for one specific module, in the order they were
+     * registered. Used by the admin matrix UI to render an accordion
+     * section per module.
+     *
+     * @return array<int, array{name: string, label: string, module: string, actions: array<int, string>}>
+     */
+    public function byModule(string $module): array;
+
+    /**
+     * Distinct list of registered module slugs, sorted alphabetically.
+     *
+     * @return array<int, string>
+     */
+    public function modules(): array;
+
+    /**
      * Persist the in-memory catalog to the `ea_permissions` table.
      *
      * Upserts by name, marks missing rows as orphaned (never deletes
