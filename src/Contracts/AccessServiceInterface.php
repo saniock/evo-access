@@ -55,4 +55,9 @@ interface AccessServiceInterface
      * @return array<string, bool>
      */
     public function actionsFor(string $permission, int $userId): array;
+
+    /**
+     * Convenience: forwards to PermissionCatalog::registerPermissions().
+     */
+    public function registerPermissions(string $module, array $permissions): void;
 }

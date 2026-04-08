@@ -140,4 +140,40 @@ class AccessServiceTest extends TestCase
         $this->assertCount(1, $filtered);
         $this->assertSame('orders', $filtered[0]['id']);
     }
+
+    public function test_actions_for_returns_action_map(): void
+    {
+        $role = Role::create(['name' => 'manager', 'label' => 'M']);
+        UserRole::create(['user_id' => 7, 'role_id' => $role->id]);
+
+        $perm = Permission::create([
+            'name' => 'orders.orders', 'label' => 'L',
+            'module' => 'orders', 'actions' => ['view', 'update', 'export'],
+        ]);
+
+        RolePermissionAction::create(['role_id' => $role->id, 'permission_id' => $perm->id, 'action' => 'view']);
+        RolePermissionAction::create(['role_id' => $role->id, 'permission_id' => $perm->id, 'action' => 'update']);
+
+        // Register the permission in the catalog so actionsFor knows what actions exist
+        $this->app->make(\Saniock\EvoAccess\Services\PermissionCatalog::class)
+            ->registerPermissions('orders', [
+                ['name' => 'orders.orders', 'label' => 'L', 'actions' => ['view', 'update', 'export']],
+            ]);
+
+        $actions = $this->service()->actionsFor('orders.orders', 7);
+
+        $this->assertTrue($actions['view']);
+        $this->assertTrue($actions['update']);
+        $this->assertFalse($actions['export']);
+    }
+
+    public function test_register_permissions_delegates_to_catalog(): void
+    {
+        $this->service()->registerPermissions('orders', [
+            ['name' => 'orders.orders', 'label' => 'L', 'actions' => ['view']],
+        ]);
+
+        $catalog = $this->app->make(\Saniock\EvoAccess\Services\PermissionCatalog::class);
+        $this->assertNotNull($catalog->find('orders.orders'));
+    }
 }

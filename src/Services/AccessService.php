@@ -109,7 +109,24 @@ class AccessService implements AccessServiceInterface
 
     public function actionsFor(string $permission, int $userId): array
     {
-        // TODO: load catalog entry, produce ['view'=>bool,'update'=>bool,...]
-        return [];
+        $catalogEntry = $this->catalog->find($permission);
+
+        // Determine which actions to report. Prefer the catalog's declared actions
+        // for the permission, falling back to a hardcoded standard list.
+        $allActions = $catalogEntry['actions'] ?? ['view', 'create', 'update', 'delete', 'export'];
+
+        $effective = $this->resolver->effectiveActions($userId, $permission);
+
+        $result = [];
+        foreach ($allActions as $action) {
+            $result[$action] = in_array($action, $effective, true);
+        }
+
+        return $result;
+    }
+
+    public function registerPermissions(string $module, array $permissions): void
+    {
+        $this->catalog->registerPermissions($module, $permissions);
     }
 }
