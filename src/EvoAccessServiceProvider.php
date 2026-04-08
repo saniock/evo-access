@@ -5,6 +5,14 @@ namespace Saniock\EvoAccess;
 use Illuminate\Support\ServiceProvider;
 use Saniock\EvoAccess\Contracts\AccessServiceInterface;
 use Saniock\EvoAccess\Contracts\PermissionCatalogInterface;
+use Saniock\EvoAccess\Models\Role;
+use Saniock\EvoAccess\Models\RolePermissionAction;
+use Saniock\EvoAccess\Models\UserOverride;
+use Saniock\EvoAccess\Models\UserRole;
+use Saniock\EvoAccess\Observers\RoleObserver;
+use Saniock\EvoAccess\Observers\RolePermissionActionObserver;
+use Saniock\EvoAccess\Observers\UserOverrideObserver;
+use Saniock\EvoAccess\Observers\UserRoleObserver;
 use Saniock\EvoAccess\Services\AccessService;
 use Saniock\EvoAccess\Services\AuditLogger;
 use Saniock\EvoAccess\Services\PermissionCatalog;
@@ -69,6 +77,11 @@ class EvoAccessServiceProvider extends ServiceProvider
         }
 
         $this->loadEvoManagerPlugin();
+
+        Role::observe(RoleObserver::class);
+        RolePermissionAction::observe(RolePermissionActionObserver::class);
+        UserRole::observe(UserRoleObserver::class);
+        UserOverride::observe(UserOverrideObserver::class);
     }
 
     /**
