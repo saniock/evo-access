@@ -58,4 +58,70 @@ class PermissionResolverTest extends TestCase
     {
         $this->assertFalse($this->resolver()->isSuperadmin(999));
     }
+
+    // -----------------------------------------------------------------
+    // Task 4.2: loadForUser
+    // -----------------------------------------------------------------
+
+    public function test_load_for_user_returns_empty_for_unassigned(): void
+    {
+        $this->assertSame([], $this->resolver()->loadForUser(999));
+    }
+
+    public function test_load_for_user_returns_is_system_marker_for_superadmin(): void
+    {
+        $superadmin = Role::where('name', 'superadmin')->firstOrFail();
+        UserRole::create(['user_id' => 7, 'role_id' => $superadmin->id]);
+
+        $map = $this->resolver()->loadForUser(7);
+        $this->assertTrue($map['__is_system'] ?? false);
+    }
+
+    public function test_load_for_user_returns_role_grants(): void
+    {
+        $role = Role::create(['name' => 'manager', 'label' => 'M']);
+        UserRole::create(['user_id' => 7, 'role_id' => $role->id]);
+
+        $perm = Permission::create([
+            'name' => 'orders.orders', 'label' => 'L',
+            'module' => 'orders', 'actions' => ['view', 'update'],
+        ]);
+
+        RolePermissionAction::create([
+            'role_id' => $role->id,
+            'permission_id' => $perm->id,
+            'action' => 'view',
+        ]);
+        RolePermissionAction::create([
+            'role_id' => $role->id,
+            'permission_id' => $perm->id,
+            'action' => 'update',
+        ]);
+
+        $map = $this->resolver()->loadForUser(7);
+
+        $this->assertTrue($map['orders.orders']['view']);
+        $this->assertTrue($map['orders.orders']['update']);
+    }
+
+    public function test_load_for_user_skips_orphaned_permissions(): void
+    {
+        $role = Role::create(['name' => 'manager', 'label' => 'M']);
+        UserRole::create(['user_id' => 7, 'role_id' => $role->id]);
+
+        $perm = Permission::create([
+            'name' => 'orders.deleted', 'label' => 'D',
+            'module' => 'orders', 'actions' => ['view'],
+            'is_orphaned' => true,
+        ]);
+
+        RolePermissionAction::create([
+            'role_id' => $role->id,
+            'permission_id' => $perm->id,
+            'action' => 'view',
+        ]);
+
+        $map = $this->resolver()->loadForUser(7);
+        $this->assertArrayNotHasKey('orders.deleted', $map);
+    }
 }
