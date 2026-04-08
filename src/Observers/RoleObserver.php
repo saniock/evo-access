@@ -30,6 +30,13 @@ class RoleObserver
         }
 
         if ($role->wasChanged('is_system')) {
+            $this->audit->log(
+                actorUserId: $this->actorId(),
+                action: 'role_is_system_changed',
+                targetRoleId: $role->id,
+                oldValue: (string) (int) $role->getOriginal('is_system'),
+                newValue: (string) (int) $role->is_system,
+            );
             $this->resolver->forgetAll();
         }
     }
