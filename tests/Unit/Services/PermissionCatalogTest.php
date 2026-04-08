@@ -103,4 +103,41 @@ class PermissionCatalogTest extends TestCase
         $this->assertSame('B', $found['label']);
         $this->assertSame(['view', 'update'], $found['actions']);
     }
+
+    public function test_find_returns_null_for_unknown(): void
+    {
+        $catalog = new PermissionCatalog();
+        $this->assertNull($catalog->find('nope.never'));
+    }
+
+    public function test_by_module_returns_only_module_rows(): void
+    {
+        $catalog = new PermissionCatalog();
+        $catalog->registerPermissions('orders', [
+            ['name' => 'orders.x', 'label' => 'X', 'actions' => ['view']],
+            ['name' => 'orders.y', 'label' => 'Y', 'actions' => ['view']],
+        ]);
+        $catalog->registerPermissions('finances', [
+            ['name' => 'finances.z', 'label' => 'Z', 'actions' => ['view']],
+        ]);
+
+        $orders = $catalog->byModule('orders');
+        $this->assertCount(2, $orders);
+    }
+
+    public function test_modules_returns_unique_sorted_list(): void
+    {
+        $catalog = new PermissionCatalog();
+        $catalog->registerPermissions('orders', [
+            ['name' => 'orders.x', 'label' => 'X', 'actions' => ['view']],
+        ]);
+        $catalog->registerPermissions('finances', [
+            ['name' => 'finances.x', 'label' => 'X', 'actions' => ['view']],
+        ]);
+        $catalog->registerPermissions('analytics', [
+            ['name' => 'analytics.x', 'label' => 'X', 'actions' => ['view']],
+        ]);
+
+        $this->assertSame(['analytics', 'finances', 'orders'], $catalog->modules());
+    }
 }

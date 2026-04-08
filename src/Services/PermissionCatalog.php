@@ -60,6 +60,21 @@ class PermissionCatalog implements PermissionCatalogInterface
         return null;
     }
 
+    public function byModule(string $module): array
+    {
+        return array_values(array_filter(
+            $this->permissions,
+            fn($p) => $p['module'] === $module
+        ));
+    }
+
+    public function modules(): array
+    {
+        $modules = array_unique(array_column($this->permissions, 'module'));
+        sort($modules);
+        return array_values($modules);
+    }
+
     public function syncToDatabase(): array
     {
         // TODO: upsert into ea_permissions, mark orphans, return counts.
