@@ -63,4 +63,37 @@ class AccessServiceTest extends TestCase
         $this->service()->authorize('orders.orders', 'view', 7);
         $this->assertTrue(true);  // no exception thrown
     }
+
+    private function ordersMenu(): array
+    {
+        return [
+            [
+                'id' => 'orders',
+                'title' => 'Orders',
+                'items' => [
+                    ['id' => 'orders',   'title' => 'List',     'permission' => 'orders.orders'],
+                    ['id' => 'payments', 'title' => 'Payments', 'permission' => 'orders.payments'],
+                ],
+            ],
+        ];
+    }
+
+    public function test_can_view_resolves_menu_item_to_permission(): void
+    {
+        $this->setupUserWithGrant('view');
+        $this->assertTrue($this->service()->canView($this->ordersMenu(), 'orders', 7));
+    }
+
+    public function test_can_view_false_when_action_id_unknown_in_menu_returns_true(): void
+    {
+        // Action IDs not present in menu (like AJAX endpoints) are not blocked
+        $this->setupUserWithGrant('view');
+        $this->assertTrue($this->service()->canView($this->ordersMenu(), 'unknown_ajax', 7));
+    }
+
+    public function test_can_edit_uses_update_action(): void
+    {
+        $this->setupUserWithGrant('update');
+        $this->assertTrue($this->service()->canEdit($this->ordersMenu(), 'orders', 7));
+    }
 }

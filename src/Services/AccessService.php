@@ -43,14 +43,36 @@ class AccessService implements AccessServiceInterface
 
     public function canView(array $menu, string $actionId, int $userId): bool
     {
-        // TODO: resolve menu item → permission name → $this->can(..., 'view', ...)
-        return false;
+        $permission = $this->resolveMenuPermission($menu, $actionId);
+        if ($permission === null) {
+            return true;  // Action ID not described in menu — allow (e.g. AJAX endpoints)
+        }
+        return $this->can($permission, 'view', $userId);
     }
 
     public function canEdit(array $menu, string $actionId, int $userId): bool
     {
-        // TODO: resolve menu item → permission name → $this->can(..., 'update', ...)
-        return false;
+        $permission = $this->resolveMenuPermission($menu, $actionId);
+        if ($permission === null) {
+            return true;
+        }
+        return $this->can($permission, 'update', $userId);
+    }
+
+    private function resolveMenuPermission(array $menu, string $actionId): ?string
+    {
+        foreach ($menu as $item) {
+            if (($item['id'] ?? null) === $actionId) {
+                return $item['permission'] ?? null;
+            }
+            if (!empty($item['items'])) {
+                $nested = $this->resolveMenuPermission($item['items'], $actionId);
+                if ($nested !== null) {
+                    return $nested;
+                }
+            }
+        }
+        return null;
     }
 
     public function filterMenu(array $menu, int $userId): array
