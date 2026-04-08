@@ -1,0 +1,52 @@
+{
+    "name": "saniock/evo-access",
+    "description": "Role and permission management for Evolution CMS 3 custom modules.",
+    "keywords": [
+        "evolution-cms",
+        "evolutioncms",
+        "access-control",
+        "rbac",
+        "permissions",
+        "roles"
+    ],
+    "type": "evolutioncms-tool",
+    "license": "GPL-3.0-or-later",
+    "authors": [
+        {
+            "name": "Oleksandr (saniock)",
+            "email": "saniock@example.com"
+        }
+    ],
+    "require": {
+        "php": "^8.3",
+        "evolutioncms/evolution": "^3.5"
+    },
+    "require-dev": {
+        "phpunit/phpunit": "^11.0"
+    },
+    "autoload": {
+        "psr-4": {
+            "Saniock\\EvoAccess\\": "src/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "Saniock\\EvoAccess\\Tests\\": "tests/"
+        }
+    },
+    "extra": {
+        "laravel": {
+            "providers": [
+                "Saniock\\EvoAccess\\EvoAccessServiceProvider"
+            ],
+            "aliases": {
+                "EvoAccess": "Saniock\\EvoAccess\\Facades\\EvoAccess"
+            }
+        }
+    },
+    "minimum-stability": "dev",
+    "prefer-stable": true,
+    "config": {
+        "sort-packages": true
+    }
+}
