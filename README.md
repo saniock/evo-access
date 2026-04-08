@@ -50,8 +50,17 @@ cd core/custom
 composer require saniock/evo-access:@dev
 php artisan vendor:publish --tag=evo-access-config
 php artisan migrate
-php artisan evoaccess:sync-permissions
 ```
+
+Edit `config/evoAccess.php` and add your EVO user IDs to
+`bootstrap_superadmin_user_ids`, then:
+
+```bash
+php artisan evoaccess:bootstrap        # seeds superadmin role + assigns users
+php artisan evoaccess:sync-permissions # syncs registered permission catalog to DB
+```
+
+Open `/access/matrix` in the manager to verify everything loaded.
 
 ## Quick start (consumer project)
 
