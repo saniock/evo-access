@@ -85,6 +85,15 @@ class EvoAccessServiceProvider extends ServiceProvider
         RolePermissionAction::observe(RolePermissionActionObserver::class);
         UserRole::observe(UserRoleObserver::class);
         UserOverride::observe(UserOverrideObserver::class);
+
+        $this->app->make(\Saniock\EvoAccess\Services\PermissionCatalog::class)
+            ->registerPermissions('access', [
+                [
+                    'name'    => 'access.admin',
+                    'label'   => 'Access — administration',
+                    'actions' => ['view', 'update'],
+                ],
+            ]);
     }
 
     /**
