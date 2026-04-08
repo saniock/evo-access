@@ -61,4 +61,13 @@ class MigrationsTest extends TestCase
             'reason', 'created_by', 'created_at',
         ]));
     }
+
+    public function test_ea_audit_log_table_exists_with_no_foreign_keys(): void
+    {
+        $this->assertTrue(Schema::hasTable('ea_audit_log'));
+        $this->assertTrue(Schema::hasColumns('ea_audit_log', [
+            'id', 'actor_user_id', 'action', 'target_role_id', 'target_user_id',
+            'permission_id', 'old_value', 'new_value', 'details', 'created_at',
+        ]));
+    }
 }
