@@ -141,7 +141,7 @@ class PermissionCatalog implements PermissionCatalogInterface
         if (!is_string($name) || $name === '' || strlen($name) > 128) {
             throw new \InvalidArgumentException("Permission name is required and must be ≤128 chars");
         }
-        if (!preg_match('/^[a-z][a-z0-9_]*\.[a-z0-9_.]+$/', $name)) {
+        if (!preg_match('/^[a-z][a-z0-9_]*(\.[a-z][a-z0-9_]*)+$/', $name)) {
             throw new \InvalidArgumentException(
                 "Permission name must match 'module.section[.subsection]' (got '$name')"
             );

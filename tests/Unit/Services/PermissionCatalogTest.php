@@ -224,4 +224,34 @@ class PermissionCatalogTest extends TestCase
         $perm = Permission::where('name', 'orders.x')->first();
         $this->assertFalse($perm->is_orphaned);
     }
+
+    public function test_validates_name_rejects_consecutive_dots(): void
+    {
+        $this->expectException(InvalidArgumentException::class);
+        $this->expectExceptionMessageMatches("/Permission name must match/");
+
+        (new PermissionCatalog())->registerPermissions('orders', [
+            ['name' => 'orders..double', 'label' => 'X', 'actions' => ['view']],
+        ]);
+    }
+
+    public function test_validates_name_rejects_digit_leading_segment(): void
+    {
+        $this->expectException(InvalidArgumentException::class);
+        $this->expectExceptionMessageMatches("/Permission name must match/");
+
+        (new PermissionCatalog())->registerPermissions('orders', [
+            ['name' => 'orders.1invalid', 'label' => 'X', 'actions' => ['view']],
+        ]);
+    }
+
+    public function test_validates_name_rejects_underscore_leading_segment(): void
+    {
+        $this->expectException(InvalidArgumentException::class);
+        $this->expectExceptionMessageMatches("/Permission name must match/");
+
+        (new PermissionCatalog())->registerPermissions('orders', [
+            ['name' => 'orders._invalid', 'label' => 'X', 'actions' => ['view']],
+        ]);
+    }
 }
