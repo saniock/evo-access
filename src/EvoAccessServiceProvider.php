@@ -4,6 +4,7 @@ namespace Saniock\EvoAccess;
 
 use Illuminate\Support\ServiceProvider;
 use Saniock\EvoAccess\Console\BootstrapCommand;
+use Saniock\EvoAccess\Console\MigrateLegacyEvoRolesCommand;
 use Saniock\EvoAccess\Console\SyncPermissionsCommand;
 use Saniock\EvoAccess\Contracts\AccessServiceInterface;
 use Saniock\EvoAccess\Contracts\PermissionCatalogInterface;
@@ -94,6 +95,7 @@ class EvoAccessServiceProvider extends ServiceProvider
         $this->commands([
             BootstrapCommand::class,
             SyncPermissionsCommand::class,
+            MigrateLegacyEvoRolesCommand::class,
         ]);
     }
 
