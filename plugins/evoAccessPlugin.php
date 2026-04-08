@@ -9,13 +9,11 @@ use Illuminate\Support\Facades\Event;
 |
 | This file is loaded by EvoAccessServiceProvider::boot() when present.
 | It hooks into EVO's OnManagerMenuPrerender event to inject an
-| "Access" entry into the top-level manager menu.
+| "Access" entry into the top-level manager menu under the configured
+| category (default: 'tools').
 |
-| Controlled by config('evoAccess.manager_menu.enabled'). Host projects
-| can disable by publishing the config and flipping the flag.
-|
-| Intentionally a stub for now — the actual menu item is added during
-| the implementation phase once the admin route is wired.
+| Disable by setting `evoAccess.manager_menu.enabled` to false in the
+| published config.
 |
 */
 
@@ -24,8 +22,23 @@ Event::listen('evolution.OnManagerMenuPrerender', function ($params) {
         return;
     }
 
-    // TODO: inject a menu entry into $params['menu'] pointing at the
-    //       evoAccess.matrix route. Requires the SVG icon from
-    //       dirname(__DIR__) . '/images/access.svg' and a label from
-    //       the evoAccess::global translation file.
+    $menu = $params['menu'] ?? [];
+
+    $menu['evo_access'] = [
+        'evo_access',
+        config('evoAccess.manager_menu.category', 'tools'),
+        '<i class="fa fa-shield-alt"></i> Access',
+        url('access/matrix'),
+        'EvoAccess — Roles & Permissions',
+        '',
+        '',
+        '',
+        0,
+        500,
+        '',
+    ];
+
+    $params['menu'] = $menu;
+
+    return serialize($params['menu']);
 });
