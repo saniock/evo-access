@@ -3,6 +3,7 @@
 namespace Saniock\EvoAccess\Console;
 
 use Illuminate\Console\Command;
+use Saniock\EvoAccess\Services\AuditLogger;
 use Saniock\EvoAccess\Services\PermissionCatalog;
 
 /**
@@ -19,7 +20,7 @@ class SyncPermissionsCommand extends Command
 
     protected $description = 'Sync the in-memory permission catalog to the ea_permissions table.';
 
-    public function handle(PermissionCatalog $catalog): int
+    public function handle(PermissionCatalog $catalog, AuditLogger $audit): int
     {
         $result = $catalog->syncToDatabase();
 
@@ -29,6 +30,8 @@ class SyncPermissionsCommand extends Command
             $result['updated'],
             $result['orphaned'],
         ));
+
+        $audit->logPermissionsSync(0, $result['created'], $result['updated'], $result['orphaned']);
 
         return self::SUCCESS;
     }
