@@ -24,8 +24,24 @@ class PermissionCatalog implements PermissionCatalogInterface
 
     public function registerPermissions(string $module, array $permissions): void
     {
-        // TODO: validate each row (name non-empty, actions array, etc),
-        //       normalize and append to $this->permissions.
+        $this->validateModuleSlug($module);
+
+        foreach ($permissions as $row) {
+            $this->validatePermissionRow($module, $row);
+
+            // Last-write-wins: remove any existing entry with the same name
+            $this->permissions = array_values(array_filter(
+                $this->permissions,
+                fn($p) => $p['name'] !== $row['name']
+            ));
+
+            $this->permissions[] = [
+                'name'    => $row['name'],
+                'label'   => $row['label'],
+                'module'  => $module,
+                'actions' => array_values($row['actions']),
+            ];
+        }
     }
 
     public function all(): array
@@ -48,5 +64,61 @@ class PermissionCatalog implements PermissionCatalogInterface
     {
         // TODO: upsert into ea_permissions, mark orphans, return counts.
         return ['created' => 0, 'updated' => 0, 'orphaned' => 0];
+    }
+
+    private function validateModuleSlug(string $module): void
+    {
+        if (!preg_match('/^[a-z][a-z0-9_]*$/', $module) || strlen($module) > 64) {
+            throw new \InvalidArgumentException(
+                "Invalid module slug '$module' — must match ^[a-z][a-z0-9_]*$ and be ≤64 chars"
+            );
+        }
+    }
+
+    private function validatePermissionRow(string $module, array $row): void
+    {
+        $name = $row['name'] ?? '';
+        if (!is_string($name) || $name === '' || strlen($name) > 128) {
+            throw new \InvalidArgumentException("Permission name is required and must be ≤128 chars");
+        }
+        if (!preg_match('/^[a-z][a-z0-9_]*\.[a-z0-9_.]+$/', $name)) {
+            throw new \InvalidArgumentException(
+                "Permission name must match 'module.section[.subsection]' (got '$name')"
+            );
+        }
+        if (!str_starts_with($name, $module . '.')) {
+            throw new \InvalidArgumentException(
+                "Permission '$name' must start with module slug '$module.'"
+            );
+        }
+
+        $label = $row['label'] ?? '';
+        if (!is_string($label) || $label === '' || strlen($label) > 255) {
+            throw new \InvalidArgumentException(
+                "Permission '$name' label is required and must be ≤255 chars"
+            );
+        }
+
+        $actions = $row['actions'] ?? null;
+        if (!is_array($actions) || empty($actions)) {
+            throw new \InvalidArgumentException(
+                "Permission '$name' must have at least one action"
+            );
+        }
+
+        $seen = [];
+        foreach ($actions as $action) {
+            if (!is_string($action) || !preg_match('/^[a-z][a-z0-9_]*$/', $action) || strlen($action) > 32) {
+                throw new \InvalidArgumentException(
+                    "Permission '$name' has invalid action '$action' (must be lowercase snake_case, ≤32 chars)"
+                );
+            }
+            if (isset($seen[$action])) {
+                throw new \InvalidArgumentException(
+                    "Permission '$name' has duplicate action '$action'"
+                );
+            }
+            $seen[$action] = true;
+        }
     }
 }
