@@ -44,4 +44,12 @@ class MigrationsTest extends TestCase
             'role_id', 'permission_id', 'action', 'granted_by', 'granted_at',
         ]));
     }
+
+    public function test_ea_user_roles_table_exists_with_user_id_pk(): void
+    {
+        $this->assertTrue(Schema::hasTable('ea_user_roles'));
+        $this->assertTrue(Schema::hasColumns('ea_user_roles', [
+            'user_id', 'role_id', 'assigned_by', 'assigned_at',
+        ]));
+    }
 }
