@@ -22,7 +22,8 @@
         "evolutioncms/evolution": "^3.5"
     },
     "require-dev": {
-        "phpunit/phpunit": "^11.0"
+        "phpunit/phpunit": "^11.0",
+        "orchestra/testbench": "^9.0"
     },
     "autoload": {
         "psr-4": {
