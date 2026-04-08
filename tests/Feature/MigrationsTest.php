@@ -52,4 +52,13 @@ class MigrationsTest extends TestCase
             'user_id', 'role_id', 'assigned_by', 'assigned_at',
         ]));
     }
+
+    public function test_ea_user_overrides_table_exists_with_mode_column(): void
+    {
+        $this->assertTrue(Schema::hasTable('ea_user_overrides'));
+        $this->assertTrue(Schema::hasColumns('ea_user_overrides', [
+            'user_id', 'permission_id', 'action', 'mode',
+            'reason', 'created_by', 'created_at',
+        ]));
+    }
 }
