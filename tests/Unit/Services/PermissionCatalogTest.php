@@ -14,7 +14,7 @@ class PermissionCatalogTest extends TestCase
 
     public function test_can_register_a_valid_batch(): void
     {
-        $catalog = new PermissionCatalog();
+        $catalog = new PermissionCatalog($this->app->make(\Saniock\EvoAccess\Services\PermissionResolver::class));
 
         $catalog->registerPermissions('orders', [
             ['name' => 'orders.orders',   'label' => 'Order list', 'actions' => ['view', 'update']],
@@ -29,7 +29,7 @@ class PermissionCatalogTest extends TestCase
         $this->expectException(InvalidArgumentException::class);
         $this->expectExceptionMessageMatches('/module slug/i');
 
-        (new PermissionCatalog())->registerPermissions('Orders', [
+        new PermissionCatalog($this->app->make(\Saniock\EvoAccess\Services\PermissionResolver::class))->registerPermissions('Orders', [
             ['name' => 'orders.x', 'label' => 'X', 'actions' => ['view']],
         ]);
     }
@@ -39,7 +39,7 @@ class PermissionCatalogTest extends TestCase
         $this->expectException(InvalidArgumentException::class);
         $this->expectExceptionMessageMatches("/Permission name must match/");
 
-        (new PermissionCatalog())->registerPermissions('orders', [
+        new PermissionCatalog($this->app->make(\Saniock\EvoAccess\Services\PermissionResolver::class))->registerPermissions('orders', [
             ['name' => 'NoDot', 'label' => 'X', 'actions' => ['view']],
         ]);
     }
@@ -49,7 +49,7 @@ class PermissionCatalogTest extends TestCase
         $this->expectException(InvalidArgumentException::class);
         $this->expectExceptionMessageMatches("/must start with module slug/");
 
-        (new PermissionCatalog())->registerPermissions('orders', [
+        new PermissionCatalog($this->app->make(\Saniock\EvoAccess\Services\PermissionResolver::class))->registerPermissions('orders', [
             ['name' => 'finances.x', 'label' => 'X', 'actions' => ['view']],
         ]);
     }
@@ -58,7 +58,7 @@ class PermissionCatalogTest extends TestCase
     {
         $this->expectException(InvalidArgumentException::class);
 
-        (new PermissionCatalog())->registerPermissions('orders', [
+        new PermissionCatalog($this->app->make(\Saniock\EvoAccess\Services\PermissionResolver::class))->registerPermissions('orders', [
             ['name' => 'orders.x', 'label' => '', 'actions' => ['view']],
         ]);
     }
@@ -67,7 +67,7 @@ class PermissionCatalogTest extends TestCase
     {
         $this->expectException(InvalidArgumentException::class);
 
-        (new PermissionCatalog())->registerPermissions('orders', [
+        new PermissionCatalog($this->app->make(\Saniock\EvoAccess\Services\PermissionResolver::class))->registerPermissions('orders', [
             ['name' => 'orders.x', 'label' => 'X', 'actions' => []],
         ]);
     }
@@ -76,7 +76,7 @@ class PermissionCatalogTest extends TestCase
     {
         $this->expectException(InvalidArgumentException::class);
 
-        (new PermissionCatalog())->registerPermissions('orders', [
+        new PermissionCatalog($this->app->make(\Saniock\EvoAccess\Services\PermissionResolver::class))->registerPermissions('orders', [
             ['name' => 'orders.x', 'label' => 'X', 'actions' => ['VIEW']],
         ]);
     }
@@ -86,14 +86,14 @@ class PermissionCatalogTest extends TestCase
         $this->expectException(InvalidArgumentException::class);
         $this->expectExceptionMessageMatches('/duplicate action/');
 
-        (new PermissionCatalog())->registerPermissions('orders', [
+        new PermissionCatalog($this->app->make(\Saniock\EvoAccess\Services\PermissionResolver::class))->registerPermissions('orders', [
             ['name' => 'orders.x', 'label' => 'X', 'actions' => ['view', 'view']],
         ]);
     }
 
     public function test_duplicate_name_overwrites_with_warning(): void
     {
-        $catalog = new PermissionCatalog();
+        $catalog = new PermissionCatalog($this->app->make(\Saniock\EvoAccess\Services\PermissionResolver::class));
 
         $catalog->registerPermissions('orders', [
             ['name' => 'orders.x', 'label' => 'A', 'actions' => ['view']],
@@ -110,13 +110,13 @@ class PermissionCatalogTest extends TestCase
 
     public function test_find_returns_null_for_unknown(): void
     {
-        $catalog = new PermissionCatalog();
+        $catalog = new PermissionCatalog($this->app->make(\Saniock\EvoAccess\Services\PermissionResolver::class));
         $this->assertNull($catalog->find('nope.never'));
     }
 
     public function test_by_module_returns_only_module_rows(): void
     {
-        $catalog = new PermissionCatalog();
+        $catalog = new PermissionCatalog($this->app->make(\Saniock\EvoAccess\Services\PermissionResolver::class));
         $catalog->registerPermissions('orders', [
             ['name' => 'orders.x', 'label' => 'X', 'actions' => ['view']],
             ['name' => 'orders.y', 'label' => 'Y', 'actions' => ['view']],
@@ -131,7 +131,7 @@ class PermissionCatalogTest extends TestCase
 
     public function test_modules_returns_unique_sorted_list(): void
     {
-        $catalog = new PermissionCatalog();
+        $catalog = new PermissionCatalog($this->app->make(\Saniock\EvoAccess\Services\PermissionResolver::class));
         $catalog->registerPermissions('orders', [
             ['name' => 'orders.x', 'label' => 'X', 'actions' => ['view']],
         ]);
@@ -147,7 +147,7 @@ class PermissionCatalogTest extends TestCase
 
     public function test_sync_creates_new_permissions(): void
     {
-        $catalog = new PermissionCatalog();
+        $catalog = new PermissionCatalog($this->app->make(\Saniock\EvoAccess\Services\PermissionResolver::class));
         $catalog->registerPermissions('orders', [
             ['name' => 'orders.orders',   'label' => 'Order list', 'actions' => ['view', 'update']],
             ['name' => 'orders.payments', 'label' => 'Payments',   'actions' => ['view']],
@@ -170,7 +170,7 @@ class PermissionCatalogTest extends TestCase
             'actions' => ['view'],
         ]);
 
-        $catalog = new PermissionCatalog();
+        $catalog = new PermissionCatalog($this->app->make(\Saniock\EvoAccess\Services\PermissionResolver::class));
         $catalog->registerPermissions('orders', [
             ['name' => 'orders.orders', 'label' => 'New label', 'actions' => ['view', 'update']],
         ]);
@@ -192,7 +192,7 @@ class PermissionCatalogTest extends TestCase
             'actions' => ['view'],
         ]);
 
-        $catalog = new PermissionCatalog();
+        $catalog = new PermissionCatalog($this->app->make(\Saniock\EvoAccess\Services\PermissionResolver::class));
         $catalog->registerPermissions('orders', [
             ['name' => 'orders.orders', 'label' => 'Order list', 'actions' => ['view']],
         ]);
@@ -214,7 +214,7 @@ class PermissionCatalogTest extends TestCase
             'is_orphaned' => true,
         ]);
 
-        $catalog = new PermissionCatalog();
+        $catalog = new PermissionCatalog($this->app->make(\Saniock\EvoAccess\Services\PermissionResolver::class));
         $catalog->registerPermissions('orders', [
             ['name' => 'orders.x', 'label' => 'X', 'actions' => ['view']],
         ]);
@@ -230,7 +230,7 @@ class PermissionCatalogTest extends TestCase
         $this->expectException(InvalidArgumentException::class);
         $this->expectExceptionMessageMatches("/Permission name must match/");
 
-        (new PermissionCatalog())->registerPermissions('orders', [
+        new PermissionCatalog($this->app->make(\Saniock\EvoAccess\Services\PermissionResolver::class))->registerPermissions('orders', [
             ['name' => 'orders..double', 'label' => 'X', 'actions' => ['view']],
         ]);
     }
@@ -240,7 +240,7 @@ class PermissionCatalogTest extends TestCase
         $this->expectException(InvalidArgumentException::class);
         $this->expectExceptionMessageMatches("/Permission name must match/");
 
-        (new PermissionCatalog())->registerPermissions('orders', [
+        new PermissionCatalog($this->app->make(\Saniock\EvoAccess\Services\PermissionResolver::class))->registerPermissions('orders', [
             ['name' => 'orders.1invalid', 'label' => 'X', 'actions' => ['view']],
         ]);
     }
@@ -250,7 +250,7 @@ class PermissionCatalogTest extends TestCase
         $this->expectException(InvalidArgumentException::class);
         $this->expectExceptionMessageMatches("/Permission name must match/");
 
-        (new PermissionCatalog())->registerPermissions('orders', [
+        new PermissionCatalog($this->app->make(\Saniock\EvoAccess\Services\PermissionResolver::class))->registerPermissions('orders', [
             ['name' => 'orders._invalid', 'label' => 'X', 'actions' => ['view']],
         ]);
     }

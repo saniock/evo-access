@@ -24,6 +24,10 @@ class PermissionCatalog implements PermissionCatalogInterface
      */
     private array $permissions = [];
 
+    public function __construct(
+        private readonly PermissionResolver $resolver,
+    ) {}
+
     public function registerPermissions(string $module, array $permissions): void
     {
         $this->validateModuleSlug($module);
@@ -79,7 +83,7 @@ class PermissionCatalog implements PermissionCatalogInterface
 
     public function syncToDatabase(): array
     {
-        return DB::transaction(function () {
+        $result = DB::transaction(function () {
             $created = 0;
             $updated = 0;
 
@@ -124,6 +128,10 @@ class PermissionCatalog implements PermissionCatalogInterface
                 'orphaned' => $orphaned,
             ];
         });
+
+        $this->resolver->forgetAll();
+
+        return $result;
     }
 
     private function validateModuleSlug(string $module): void
