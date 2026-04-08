@@ -124,4 +124,62 @@ class PermissionResolverTest extends TestCase
         $map = $this->resolver()->loadForUser(7);
         $this->assertArrayNotHasKey('orders.deleted', $map);
     }
+
+    // -----------------------------------------------------------------
+    // Task 4.4: cache invalidation
+    // -----------------------------------------------------------------
+
+    public function test_forget_user_clears_one_users_cache(): void
+    {
+        $resolver = $this->resolver();
+
+        $role = Role::create(['name' => 'manager', 'label' => 'M']);
+        UserRole::create(['user_id' => 7, 'role_id' => $role->id]);
+
+        $resolver->loadForUser(7);
+        $resolver->loadForUser(8);
+
+        $resolver->forgetUser(7);
+
+        // Re-loading user 7 should hit DB again (verified by adding a grant after)
+        $perm = Permission::create([
+            'name' => 'orders.orders', 'label' => 'L',
+            'module' => 'orders', 'actions' => ['view'],
+        ]);
+        RolePermissionAction::create([
+            'role_id' => $role->id,
+            'permission_id' => $perm->id,
+            'action' => 'view',
+        ]);
+
+        $map = $resolver->loadForUser(7);
+        $this->assertTrue($map['orders.orders']['view'] ?? false);
+    }
+
+    public function test_forget_all_clears_all_caches(): void
+    {
+        $resolver = $this->resolver();
+
+        $role = Role::create(['name' => 'manager', 'label' => 'M']);
+        UserRole::create(['user_id' => 7, 'role_id' => $role->id]);
+        UserRole::create(['user_id' => 8, 'role_id' => $role->id]);
+
+        $resolver->loadForUser(7);
+        $resolver->loadForUser(8);
+
+        $resolver->forgetAll();
+
+        $perm = Permission::create([
+            'name' => 'orders.orders', 'label' => 'L',
+            'module' => 'orders', 'actions' => ['view'],
+        ]);
+        RolePermissionAction::create([
+            'role_id' => $role->id,
+            'permission_id' => $perm->id,
+            'action' => 'view',
+        ]);
+
+        $this->assertTrue($resolver->loadForUser(7)['orders.orders']['view'] ?? false);
+        $this->assertTrue($resolver->loadForUser(8)['orders.orders']['view'] ?? false);
+    }
 }
