@@ -3,6 +3,8 @@
 namespace Saniock\EvoAccess;
 
 use Illuminate\Support\ServiceProvider;
+use Saniock\EvoAccess\Console\BootstrapCommand;
+use Saniock\EvoAccess\Console\SyncPermissionsCommand;
 use Saniock\EvoAccess\Contracts\AccessServiceInterface;
 use Saniock\EvoAccess\Contracts\PermissionCatalogInterface;
 use Saniock\EvoAccess\Models\Role;
@@ -90,7 +92,8 @@ class EvoAccessServiceProvider extends ServiceProvider
     private function registerConsoleCommands(): void
     {
         $this->commands([
-            // Console\SyncPermissionsCommand::class,
+            BootstrapCommand::class,
+            SyncPermissionsCommand::class,
         ]);
     }
 
