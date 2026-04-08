@@ -36,4 +36,12 @@ class MigrationsTest extends TestCase
             'is_orphaned', 'created_at', 'updated_at',
         ]));
     }
+
+    public function test_ea_role_permission_actions_table_exists_with_composite_pk(): void
+    {
+        $this->assertTrue(Schema::hasTable('ea_role_permission_actions'));
+        $this->assertTrue(Schema::hasColumns('ea_role_permission_actions', [
+            'role_id', 'permission_id', 'action', 'granted_by', 'granted_at',
+        ]));
+    }
 }
