@@ -3,17 +3,17 @@
 namespace Saniock\EvoAccess\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 /**
  * Access-control role: a named bundle of permission grants.
  *
- * Table: ea_roles
- *
  * @property int    $id
- * @property string $name        slug, unique (e.g. 'manager', 'warehouse_chief')
- * @property string $label       human title (e.g. 'Менеджер')
+ * @property string $name
+ * @property string $label
  * @property string|null $description
- * @property bool   $is_system   superadmin role flag — not user-editable
+ * @property bool   $is_system
+ * @property int|null $created_by
  */
 class Role extends Model
 {
@@ -24,9 +24,29 @@ class Role extends Model
         'label',
         'description',
         'is_system',
+        'created_by',
+    ];
+
+    protected $attributes = [
+        'is_system' => false,
     ];
 
     protected $casts = [
         'is_system' => 'bool',
     ];
+
+    public function grants(): HasMany
+    {
+        return $this->hasMany(RolePermissionAction::class, 'role_id');
+    }
+
+    public function userAssignments(): HasMany
+    {
+        return $this->hasMany(UserRole::class, 'role_id');
+    }
+
+    public function scopeSystem($query)
+    {
+        return $query->where('is_system', true);
+    }
 }
