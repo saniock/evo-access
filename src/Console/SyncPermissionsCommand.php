@@ -24,7 +24,7 @@ class SyncPermissionsCommand extends Command
         $result = $catalog->syncToDatabase();
 
         $this->info(sprintf(
-            'Permission sync complete — created: %d, updated: %d, orphaned: %d',
+            'Sync complete: created %d, updated %d, orphaned %d',
             $result['created'],
             $result['updated'],
             $result['orphaned'],
