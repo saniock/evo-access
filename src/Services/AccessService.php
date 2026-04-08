@@ -77,8 +77,34 @@ class AccessService implements AccessServiceInterface
 
     public function filterMenu(array $menu, int $userId): array
     {
-        // TODO: walk tree, drop items with no 'view' grant, collapse empty groups.
-        return [];
+        $out = [];
+
+        foreach ($menu as $item) {
+            // Has children? Recurse first.
+            if (!empty($item['items'])) {
+                $children = $this->filterMenu($item['items'], $userId);
+                if (empty($children)) {
+                    continue;  // group is empty after filtering — drop it
+                }
+                $copy = $item;
+                $copy['items'] = $children;
+                $out[] = $copy;
+                continue;
+            }
+
+            // Leaf item — check view permission
+            $permission = $item['permission'] ?? null;
+            if ($permission === null) {
+                $out[] = $item;  // No permission tag → always visible
+                continue;
+            }
+
+            if ($this->can($permission, 'view', $userId)) {
+                $out[] = $item;
+            }
+        }
+
+        return $out;
     }
 
     public function actionsFor(string $permission, int $userId): array

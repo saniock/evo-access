@@ -96,4 +96,48 @@ class AccessServiceTest extends TestCase
         $this->setupUserWithGrant('update');
         $this->assertTrue($this->service()->canEdit($this->ordersMenu(), 'orders', 7));
     }
+
+    public function test_filter_menu_keeps_visible_items(): void
+    {
+        $this->setupUserWithGrant('view');
+
+        $filtered = $this->service()->filterMenu($this->ordersMenu(), 7);
+        $this->assertCount(1, $filtered);
+        $this->assertCount(1, $filtered[0]['items']);
+        $this->assertSame('orders', $filtered[0]['items'][0]['id']);
+    }
+
+    public function test_filter_menu_drops_items_without_view(): void
+    {
+        // user has no role at all
+        $filtered = $this->service()->filterMenu($this->ordersMenu(), 999);
+        $this->assertEmpty($filtered);
+    }
+
+    public function test_filter_menu_collapses_empty_groups(): void
+    {
+        $this->setupUserWithGrant('view');
+
+        $menu = [
+            [
+                'id' => 'finances',
+                'title' => 'Finances',
+                'items' => [
+                    ['id' => 'banks', 'title' => 'Banks', 'permission' => 'finances.banks'],
+                ],
+            ],
+            [
+                'id' => 'orders',
+                'title' => 'Orders',
+                'items' => [
+                    ['id' => 'orders', 'title' => 'List', 'permission' => 'orders.orders'],
+                ],
+            ],
+        ];
+
+        // User has 'orders.orders' grant but no 'finances.banks' — finances group should be collapsed
+        $filtered = $this->service()->filterMenu($menu, 7);
+        $this->assertCount(1, $filtered);
+        $this->assertSame('orders', $filtered[0]['id']);
+    }
 }
