@@ -40,7 +40,12 @@ class MigrateLegacyEvoRolesCommand extends Command
             ->where('role', '>', 0)
             ->get(['internalKey', 'role', 'fullname']);
 
-        $stats = ['migrated' => 0, 'skipped_no_mapping' => 0, 'skipped_already_assigned' => 0];
+        $stats = [
+            'migrated'                => 0,
+            'skipped_no_mapping'      => 0,
+            'skipped_missing_dd_role' => 0,
+            'skipped_already_assigned' => 0,
+        ];
 
         foreach ($evoUsers as $evoUser) {
             $evoRoleId = (string) $evoUser->role;
@@ -55,6 +60,7 @@ class MigrateLegacyEvoRolesCommand extends Command
             $ddRole = Role::where('name', $ddRoleName)->first();
             if (!$ddRole) {
                 $this->error("DD role '{$ddRoleName}' does not exist — create it first in /access/matrix");
+                $stats['skipped_missing_dd_role']++;
                 continue;
             }
 
@@ -64,20 +70,27 @@ class MigrateLegacyEvoRolesCommand extends Command
                 continue;
             }
 
-            if (!$this->option('dry-run')) {
+            if ($this->option('dry-run')) {
+                $this->line("Would migrate: {$evoUser->fullname} (user_id={$evoUser->internalKey}) → {$ddRoleName}");
+            } else {
                 UserRole::create([
                     'user_id'     => $evoUser->internalKey,
                     'role_id'     => $ddRole->id,
                     'assigned_by' => null,
                 ]);
+                $this->info("✓ {$evoUser->fullname} (user_id={$evoUser->internalKey}) → {$ddRoleName}");
             }
-
-            $this->info("✓ {$evoUser->fullname} (user_id={$evoUser->internalKey}) → {$ddRoleName}");
             $stats['migrated']++;
         }
 
         $this->newLine();
-        $this->info("Migration complete: {$stats['migrated']} migrated, {$stats['skipped_no_mapping']} skipped (no mapping), {$stats['skipped_already_assigned']} skipped (already assigned)");
+        $this->info(sprintf(
+            'Migration complete: %d migrated, %d skipped (no mapping), %d skipped (missing DD role), %d skipped (already assigned)',
+            $stats['migrated'],
+            $stats['skipped_no_mapping'],
+            $stats['skipped_missing_dd_role'],
+            $stats['skipped_already_assigned'],
+        ));
 
         return self::SUCCESS;
     }
