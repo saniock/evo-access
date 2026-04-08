@@ -182,4 +182,26 @@ class PermissionResolverTest extends TestCase
         $this->assertTrue($resolver->loadForUser(7)['orders.orders']['view'] ?? false);
         $this->assertTrue($resolver->loadForUser(8)['orders.orders']['view'] ?? false);
     }
+
+    // -----------------------------------------------------------------
+    // Task 4.5: effectiveActions
+    // -----------------------------------------------------------------
+
+    public function test_effective_actions_returns_granted_actions(): void
+    {
+        $role = Role::create(['name' => 'manager', 'label' => 'M']);
+        UserRole::create(['user_id' => 7, 'role_id' => $role->id]);
+
+        $perm = Permission::create([
+            'name' => 'orders.orders', 'label' => 'L',
+            'module' => 'orders', 'actions' => ['view', 'update', 'export'],
+        ]);
+
+        RolePermissionAction::create(['role_id' => $role->id, 'permission_id' => $perm->id, 'action' => 'view']);
+        RolePermissionAction::create(['role_id' => $role->id, 'permission_id' => $perm->id, 'action' => 'update']);
+
+        $actions = $this->resolver()->effectiveActions(7, 'orders.orders');
+        sort($actions);
+        $this->assertSame(['update', 'view'], $actions);
+    }
 }
