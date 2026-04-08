@@ -5,18 +5,12 @@ namespace Saniock\EvoAccess\Models;
 use Illuminate\Database\Eloquent\Model;
 
 /**
- * Known permission in the system (synced from the in-memory catalog
- * by SyncPermissionsCommand). Existence here is a precondition for
- * granting it to a role.
- *
- * Table: ea_permissions
- *
  * @property int    $id
  * @property string $name          e.g. 'orders.orders'
- * @property string $label         human description
- * @property string $module        grouping key for UI accordion
- * @property array  $actions       json list of allowed actions
- * @property bool   $is_orphaned   1 when it disappeared from the in-memory catalog
+ * @property string $label
+ * @property string $module
+ * @property array  $actions       JSON list of allowed actions
+ * @property bool   $is_orphaned
  */
 class Permission extends Model
 {
@@ -30,8 +24,22 @@ class Permission extends Model
         'is_orphaned',
     ];
 
+    protected $attributes = [
+        'is_orphaned' => false,
+    ];
+
     protected $casts = [
         'actions'     => 'array',
         'is_orphaned' => 'bool',
     ];
+
+    public function scopeActive($query)
+    {
+        return $query->where('is_orphaned', false);
+    }
+
+    public function scopeForModule($query, string $module)
+    {
+        return $query->where('module', $module);
+    }
 }
