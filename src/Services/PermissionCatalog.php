@@ -2,7 +2,9 @@
 
 namespace Saniock\EvoAccess\Services;
 
+use Illuminate\Support\Facades\DB;
 use Saniock\EvoAccess\Contracts\PermissionCatalogInterface;
+use Saniock\EvoAccess\Models\Permission;
 
 /**
  * In-memory registry of permissions declared by consumer projects.
@@ -77,8 +79,51 @@ class PermissionCatalog implements PermissionCatalogInterface
 
     public function syncToDatabase(): array
     {
-        // TODO: upsert into ea_permissions, mark orphans, return counts.
-        return ['created' => 0, 'updated' => 0, 'orphaned' => 0];
+        return DB::transaction(function () {
+            $created = 0;
+            $updated = 0;
+
+            $catalogNames = array_column($this->permissions, 'name');
+
+            foreach ($this->permissions as $row) {
+                $existing = Permission::where('name', $row['name'])->first();
+
+                if ($existing) {
+                    $existing->fill([
+                        'label'       => $row['label'],
+                        'module'      => $row['module'],
+                        'actions'     => $row['actions'],
+                        'is_orphaned' => false,
+                    ]);
+
+                    if ($existing->isDirty()) {
+                        $existing->save();
+                        $updated++;
+                    }
+                } else {
+                    Permission::create([
+                        'name'        => $row['name'],
+                        'label'       => $row['label'],
+                        'module'      => $row['module'],
+                        'actions'     => $row['actions'],
+                        'is_orphaned' => false,
+                    ]);
+                    $created++;
+                }
+            }
+
+            // Mark anything in DB but not in catalog as orphaned
+            $orphaned = Permission::query()
+                ->whereNotIn('name', $catalogNames)
+                ->where('is_orphaned', false)
+                ->update(['is_orphaned' => true]);
+
+            return [
+                'created'  => $created,
+                'updated'  => $updated,
+                'orphaned' => $orphaned,
+            ];
+        });
     }
 
     private function validateModuleSlug(string $module): void

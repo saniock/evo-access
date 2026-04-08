@@ -2,12 +2,16 @@
 
 namespace Saniock\EvoAccess\Tests\Unit\Services;
 
+use Illuminate\Foundation\Testing\RefreshDatabase;
 use InvalidArgumentException;
+use Saniock\EvoAccess\Models\Permission;
 use Saniock\EvoAccess\Services\PermissionCatalog;
 use Saniock\EvoAccess\Tests\TestCase;
 
 class PermissionCatalogTest extends TestCase
 {
+    use RefreshDatabase;
+
     public function test_can_register_a_valid_batch(): void
     {
         $catalog = new PermissionCatalog();
@@ -139,5 +143,85 @@ class PermissionCatalogTest extends TestCase
         ]);
 
         $this->assertSame(['analytics', 'finances', 'orders'], $catalog->modules());
+    }
+
+    public function test_sync_creates_new_permissions(): void
+    {
+        $catalog = new PermissionCatalog();
+        $catalog->registerPermissions('orders', [
+            ['name' => 'orders.orders',   'label' => 'Order list', 'actions' => ['view', 'update']],
+            ['name' => 'orders.payments', 'label' => 'Payments',   'actions' => ['view']],
+        ]);
+
+        $result = $catalog->syncToDatabase();
+
+        $this->assertSame(2, $result['created']);
+        $this->assertSame(0, $result['updated']);
+        $this->assertSame(0, $result['orphaned']);
+        $this->assertSame(2, Permission::count());
+    }
+
+    public function test_sync_updates_existing_permissions(): void
+    {
+        Permission::create([
+            'name'    => 'orders.orders',
+            'label'   => 'Old label',
+            'module'  => 'orders',
+            'actions' => ['view'],
+        ]);
+
+        $catalog = new PermissionCatalog();
+        $catalog->registerPermissions('orders', [
+            ['name' => 'orders.orders', 'label' => 'New label', 'actions' => ['view', 'update']],
+        ]);
+
+        $result = $catalog->syncToDatabase();
+
+        $this->assertSame(1, $result['updated']);
+        $perm = Permission::where('name', 'orders.orders')->first();
+        $this->assertSame('New label', $perm->label);
+        $this->assertSame(['view', 'update'], $perm->actions);
+    }
+
+    public function test_sync_marks_orphans(): void
+    {
+        Permission::create([
+            'name'    => 'orders.removed',
+            'label'   => 'Removed',
+            'module'  => 'orders',
+            'actions' => ['view'],
+        ]);
+
+        $catalog = new PermissionCatalog();
+        $catalog->registerPermissions('orders', [
+            ['name' => 'orders.orders', 'label' => 'Order list', 'actions' => ['view']],
+        ]);
+
+        $result = $catalog->syncToDatabase();
+
+        $this->assertSame(1, $result['orphaned']);
+        $orphaned = Permission::where('name', 'orders.removed')->first();
+        $this->assertTrue($orphaned->is_orphaned);
+    }
+
+    public function test_sync_unflags_orphan_when_re_registered(): void
+    {
+        Permission::create([
+            'name'        => 'orders.x',
+            'label'       => 'X',
+            'module'      => 'orders',
+            'actions'     => ['view'],
+            'is_orphaned' => true,
+        ]);
+
+        $catalog = new PermissionCatalog();
+        $catalog->registerPermissions('orders', [
+            ['name' => 'orders.x', 'label' => 'X', 'actions' => ['view']],
+        ]);
+
+        $catalog->syncToDatabase();
+
+        $perm = Permission::where('name', 'orders.x')->first();
+        $this->assertFalse($perm->is_orphaned);
     }
 }
