@@ -28,6 +28,7 @@ class BootstrapCommand extends Command
 
         $created = 0;
         $existing = 0;
+        $wouldCreate = 0;
 
         foreach ($userIds as $userId) {
             $userId = (int) $userId;
@@ -41,17 +42,25 @@ class BootstrapCommand extends Command
                 continue;
             }
 
-            if (!$this->option('dry-run')) {
-                UserRole::create([
-                    'user_id'     => $userId,
-                    'role_id'     => $superadmin->id,
-                    'assigned_by' => null,
-                ]);
+            if ($this->option('dry-run')) {
+                $this->line("Would create assignment for user {$userId}");
+                $wouldCreate++;
+                continue;
             }
+
+            UserRole::create([
+                'user_id'     => $userId,
+                'role_id'     => $superadmin->id,
+                'assigned_by' => null,
+            ]);
             $created++;
         }
 
-        $this->info("Bootstrap complete: {$created} new, {$existing} already existed.");
+        if ($this->option('dry-run')) {
+            $this->info("Bootstrap dry-run: {$wouldCreate} would be created, {$existing} already existed.");
+        } else {
+            $this->info("Bootstrap complete: {$created} new, {$existing} already existed.");
+        }
         return self::SUCCESS;
     }
 }
