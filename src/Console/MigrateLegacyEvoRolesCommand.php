@@ -79,8 +79,8 @@ class MigrateLegacyEvoRolesCommand extends Command
                     'assigned_by' => null,
                 ]);
                 $this->info("✓ {$evoUser->fullname} (user_id={$evoUser->internalKey}) → {$ddRoleName}");
+                $stats['migrated']++;
             }
-            $stats['migrated']++;
         }
 
         $this->newLine();
