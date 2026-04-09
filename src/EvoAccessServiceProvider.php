@@ -21,6 +21,7 @@ use Saniock\EvoAccess\Observers\UserRoleObserver;
 use Saniock\EvoAccess\Services\AccessService;
 use Saniock\EvoAccess\Services\AuditLogger;
 use Saniock\EvoAccess\Services\PermissionCatalog;
+use Saniock\EvoAccess\Services\PermissionParsers\ParserRegistry;
 use Saniock\EvoAccess\Services\PermissionResolver;
 
 /**
@@ -51,6 +52,7 @@ class EvoAccessServiceProvider extends ServiceProvider
         $this->app->singleton(PermissionResolver::class);
         $this->app->singleton(AuditLogger::class);
         $this->app->singleton(AccessService::class);
+        $this->app->singleton(ParserRegistry::class);
 
         $this->app->alias(AccessService::class, AccessServiceInterface::class);
         $this->app->alias(PermissionCatalog::class, PermissionCatalogInterface::class);
