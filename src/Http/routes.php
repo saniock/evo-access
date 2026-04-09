@@ -26,6 +26,7 @@ Route::group([
 ], function () {
     // Roles CRUD
     Route::get('roles', [RolesController::class, 'index'])->name('roles.index');
+    Route::get('roles/data', [RolesController::class, 'data'])->name('roles.data');
     Route::post('roles', [RolesController::class, 'store'])->name('roles.store');
     Route::put('roles/{id}', [RolesController::class, 'update'])->name('roles.update');
     Route::delete('roles/{id}', [RolesController::class, 'destroy'])->name('roles.destroy');

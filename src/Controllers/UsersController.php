@@ -55,9 +55,17 @@ class UsersController extends BaseController
     {
         $data = $request->validate(['role_id' => 'required|integer|exists:ea_roles,id']);
 
+        // assigned_at is updated on every reassignment so the column
+        // reflects when the user got their CURRENT role, not when the
+        // row was first inserted (Schema::useCurrent() only fires on
+        // insert, not on update).
         UserRole::updateOrCreate(
             ['user_id' => $user_id],
-            ['role_id' => $data['role_id']],
+            [
+                'role_id'     => $data['role_id'],
+                'assigned_by' => $this->currentUserId(),
+                'assigned_at' => now(),
+            ],
         );
 
         return response()->json(['ok' => true]);
@@ -79,7 +87,10 @@ class UsersController extends BaseController
             'action'        => $data['action'],
         ])->delete();
 
-        UserOverride::create($data + ['user_id' => $user_id]);
+        UserOverride::create($data + [
+            'user_id'    => $user_id,
+            'created_by' => $this->currentUserId(),
+        ]);
 
         return response()->json(['ok' => true], 201);
     }

@@ -9,7 +9,25 @@ use Saniock\EvoAccess\Models\RolePermissionAction;
 
 class RolesController extends BaseController
 {
-    public function index(): JsonResponse
+    /**
+     * Render the Roles admin page (HTML). The page itself is empty
+     * markup + a small JS bootstrapper that fetches data() below.
+     *
+     * Mirrors the Matrix/Users/Audit controllers, where index() always
+     * returns a Blade view and a sibling data()/search() endpoint
+     * returns the JSON payload.
+     */
+    public function index()
+    {
+        return view('evoAccess::roles');
+    }
+
+    /**
+     * JSON endpoint backing the roles list — consumed by roles.blade.php
+     * via eaFetch('/roles/data'). Kept separate from index() so the
+     * page URL serves HTML and never returns raw JSON.
+     */
+    public function data(): JsonResponse
     {
         $roles = Role::query()
             ->withCount('userAssignments')
@@ -27,7 +45,10 @@ class RolesController extends BaseController
             'description' => 'nullable|string|max:255',
         ]);
 
-        $role = Role::create($data + ['is_system' => false]);
+        $role = Role::create($data + [
+            'is_system'  => false,
+            'created_by' => $this->currentUserId(),
+        ]);
 
         return response()->json($role, 201);
     }
@@ -70,6 +91,7 @@ class RolesController extends BaseController
     public function clone(int $id): JsonResponse
     {
         $source = Role::findOrFail($id);
+        $actor = $this->currentUserId();
 
         $newName = $source->name . '_copy';
         $i = 1;
@@ -83,15 +105,21 @@ class RolesController extends BaseController
             'label'       => $source->label . ' (copy)',
             'description' => $source->description,
             'is_system'   => false,
+            'created_by'  => $actor,
         ]);
 
-        // Copy all grants
+        // Copy all grants. The cloned grants are conceptually a NEW
+        // grant action by the current actor (rather than a passive
+        // mirror of the source), so granted_by + granted_at are set
+        // to the cloning actor / now — keeps the audit trail honest.
         $sourceGrants = RolePermissionAction::where('role_id', $source->id)->get();
         foreach ($sourceGrants as $grant) {
             RolePermissionAction::create([
                 'role_id'       => $newRole->id,
                 'permission_id' => $grant->permission_id,
                 'action'        => $grant->action,
+                'granted_by'    => $actor,
+                'granted_at'    => now(),
             ]);
         }
 

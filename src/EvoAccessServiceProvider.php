@@ -2,6 +2,8 @@
 
 namespace Saniock\EvoAccess;
 
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\ServiceProvider;
 use Saniock\EvoAccess\Console\BootstrapCommand;
 use Saniock\EvoAccess\Console\MigrateLegacyEvoRolesCommand;
@@ -35,6 +37,8 @@ class EvoAccessServiceProvider extends ServiceProvider
      *
      * Bound as singletons so per-request caches inside the resolver
      * and the catalog survive across all call sites within a request.
+     *
+     * register() is side-effect-free — DI bindings only.
      */
     public function register(): void
     {
@@ -56,11 +60,30 @@ class EvoAccessServiceProvider extends ServiceProvider
 
     /**
      * Bootstrap the package: migrations, views, translations, routes,
-     * publishable assets, console commands.
+     * observers, console commands, EVO manager-menu plugin.
+     *
+     * Routes/views/observers always run — the actual access control
+     * for the admin UI lives in BaseController::ensureAdminAccess(),
+     * which 401/403's any caller without the access.admin permission.
+     *
+     * The "soft rollout" gate sits inside the EVO manager-menu plugin
+     * (plugins/evoAccessPlugin.php) and reads
+     * config('evoAccess.web_user_whitelist') — only whitelisted EVO
+     * user IDs see the new "Access" entry in the manager top menu, so
+     * a half-finished package can ship alongside live managers without
+     * disturbing them. Empty whitelist = general rollout, everyone
+     * gets the menu entry.
      */
     public function boot(): void
     {
+        $this->registerRequestValidateMacro();
+
         $this->loadMigrationsFrom(__DIR__ . '/Database/Migrations');
+
+        if ($this->app->runningInConsole()) {
+            $this->registerConsoleCommands();
+            $this->registerPublishing();
+        }
 
         $this->loadViewsFrom(
             dirname(__DIR__) . '/views',
@@ -74,11 +97,6 @@ class EvoAccessServiceProvider extends ServiceProvider
 
         $this->loadRoutesFrom(__DIR__ . '/Http/routes.php');
 
-        if ($this->app->runningInConsole()) {
-            $this->registerConsoleCommands();
-            $this->registerPublishing();
-        }
-
         $this->loadEvoManagerPlugin();
 
         Role::observe(RoleObserver::class);
@@ -86,14 +104,41 @@ class EvoAccessServiceProvider extends ServiceProvider
         UserRole::observe(UserRoleObserver::class);
         UserOverride::observe(UserOverrideObserver::class);
 
-        $this->app->make(\Saniock\EvoAccess\Services\PermissionCatalog::class)
+        $this->app->make(PermissionCatalog::class)
             ->registerPermissions('access', [
                 [
-                    'name'    => 'access.admin',
-                    'label'   => 'Access — administration',
+                    'name' => 'access.admin',
+                    'label' => 'Access — administration',
                     'actions' => ['view', 'update'],
                 ],
             ]);
+    }
+
+    /**
+     * Polyfill `Illuminate\Http\Request::validate()` for hosts that
+     * don't ship Laravel's FoundationServiceProvider.
+     *
+     * In a full Laravel app, the macro is registered automatically by
+     * Illuminate\Foundation\Providers\FoundationServiceProvider — but
+     * EVO 3.5 has a custom bootstrap that doesn't register that
+     * provider, so `$request->validate([...])` would normally throw
+     * "Method Illuminate\Http\Request::validate does not exist". The
+     * underlying validator package IS available, just not the sugar.
+     *
+     * The hasMacro() guard makes this a no-op in environments where
+     * the macro already exists, so consumers running on full Laravel
+     * are unaffected.
+     */
+    private function registerRequestValidateMacro(): void
+    {
+        if (Request::hasMacro('validate')) {
+            return;
+        }
+
+        Request::macro('validate', function (array $rules, array $messages = [], array $customAttributes = []) {
+            /** @var Request $this */
+            return Validator::make($this->all(), $rules, $messages, $customAttributes)->validate();
+        });
     }
 
     /**
@@ -123,8 +168,8 @@ class EvoAccessServiceProvider extends ServiceProvider
         ], 'evo-access-views');
 
         $this->publishes([
-            dirname(__DIR__) . '/css'    => public_path('vendor/evoAccess/css'),
-            dirname(__DIR__) . '/js'     => public_path('vendor/evoAccess/js'),
+            dirname(__DIR__) . '/css' => public_path('vendor/evoAccess/css'),
+            dirname(__DIR__) . '/js' => public_path('vendor/evoAccess/js'),
             dirname(__DIR__) . '/images' => public_path('vendor/evoAccess/images'),
         ], 'evo-access-assets');
     }

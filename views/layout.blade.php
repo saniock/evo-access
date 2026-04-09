@@ -24,11 +24,14 @@
         <span class="navbar-brand">
             <strong>EvoAccess</strong>
         </span>
+        {{-- Relative paths used intentionally — Laravel's url() helper
+             depends on Illuminate\Contracts\Routing\UrlGenerator which
+             is not bound in EVO's manager/admin context. --}}
         <ul class="navbar-nav">
-            <li class="nav-item"><a class="nav-link" href="{{ url('access/roles') }}">Roles</a></li>
-            <li class="nav-item"><a class="nav-link" href="{{ url('access/matrix') }}">Matrix</a></li>
-            <li class="nav-item"><a class="nav-link" href="{{ url('access/users') }}">Users</a></li>
-            <li class="nav-item"><a class="nav-link" href="{{ url('access/audit') }}">Audit</a></li>
+            <li class="nav-item"><a class="nav-link" href="/access/roles">Roles</a></li>
+            <li class="nav-item"><a class="nav-link" href="/access/matrix">Matrix</a></li>
+            <li class="nav-item"><a class="nav-link" href="/access/users">Users</a></li>
+            <li class="nav-item"><a class="nav-link" href="/access/audit">Audit</a></li>
         </ul>
     </div>
 </nav>
@@ -41,7 +44,7 @@
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 <script>
-    const EVO_ACCESS_BASE = '{{ url('access') }}';
+    const EVO_ACCESS_BASE = '/access';
 
     /**
      * Fetch helper with JSON handling + auth error surfacing.
@@ -68,8 +71,26 @@
             throw new Error('403');
         }
         if (!response.ok) {
-            const text = await response.text();
-            eaToast('Request failed: ' + response.status + ' ' + text.slice(0, 200), 'danger');
+            // Try to surface a human-readable error from the JSON body
+            // (Laravel returns {error: "..."} or {message: "...", errors: {...}}
+            // for validation/conflict failures). Fall back to raw text.
+            let message = response.status + ' ' + response.statusText;
+            try {
+                const body = await response.clone().json();
+                if (body.error) {
+                    message = body.error;
+                } else if (body.message) {
+                    message = body.message;
+                    if (body.errors && typeof body.errors === 'object') {
+                        const fieldErrors = Object.values(body.errors).flat().join(' • ');
+                        if (fieldErrors) message += ' — ' + fieldErrors;
+                    }
+                }
+            } catch (_) {
+                const text = await response.text();
+                if (text) message += ' ' + text.slice(0, 200);
+            }
+            eaToast(message, 'danger');
             throw new Error(String(response.status));
         }
 

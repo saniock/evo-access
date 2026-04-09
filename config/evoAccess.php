@@ -69,4 +69,26 @@ return [
         'route'    => 'evoAccess.matrix',
     ],
 
+    /*
+    |--------------------------------------------------------------------------
+    | Web user whitelist (rollout gate)
+    |--------------------------------------------------------------------------
+    |
+    | EVO manager user IDs that should see the package integration on
+    | web requests. When non-empty, only these users get the menu entry,
+    | routes, observers, and EVO menu plugin — for everyone else the
+    | package is invisible. This lets you ship a half-finished package
+    | alongside live managers without disturbing their workflow.
+    |
+    | Empty array (default) means "no gating, everyone gets it" — flip
+    | the switch by overriding this in your consumer config once the
+    | package is smoke-tested end-to-end and ready for general rollout.
+    |
+    | CLI is never gated — `php artisan migrate` and the evoaccess:*
+    | commands always work regardless of this setting.
+    |
+    */
+
+    'web_user_whitelist' => [],
+
 ];
