@@ -11,10 +11,6 @@ use Saniock\EvoAccess\Exceptions\AccessDeniedException;
  * Coordinates the PermissionResolver (computes effective permissions
  * for a user) and the PermissionCatalog (knows what permissions/actions
  * exist). Stateless itself — all caching lives in the resolver.
- *
- * The old EvolutionCMS\Ddaudio\Services\ModuleAccess class will become
- * a thin facade delegating to this service once the package lands in
- * the host project.
  */
 class AccessService implements AccessServiceInterface
 {
