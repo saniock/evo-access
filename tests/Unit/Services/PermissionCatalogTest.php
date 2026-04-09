@@ -254,4 +254,35 @@ class PermissionCatalogTest extends TestCase
             ['name' => 'orders._invalid', 'label' => 'X', 'actions' => ['view']],
         ]);
     }
+
+    public function test_register_permissions_accepts_dashes_in_name_segments(): void
+    {
+        $catalog = new PermissionCatalog($this->app->make(\Saniock\EvoAccess\Services\PermissionResolver::class));
+
+        $catalog->registerPermissions('orders', [
+            [
+                'name'    => 'orders.sales.gift-cards',
+                'label'   => 'Orders — Sales gift cards',
+                'actions' => ['view', 'edit'],
+            ],
+        ]);
+
+        $this->assertNotNull($catalog->find('orders.sales.gift-cards'));
+    }
+
+    public function test_register_permissions_rejects_leading_dash_in_segment(): void
+    {
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessageMatches('/Permission name must match/');
+
+        $catalog = new PermissionCatalog($this->app->make(\Saniock\EvoAccess\Services\PermissionResolver::class));
+
+        $catalog->registerPermissions('foo', [
+            [
+                'name'    => 'foo.-bar',
+                'label'   => 'Invalid leading dash',
+                'actions' => ['view'],
+            ],
+        ]);
+    }
 }
