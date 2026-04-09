@@ -6,7 +6,7 @@
 
 **Architecture:** Six MySQL tables (`ea_*`) hold roles, permissions, grants, user assignments, overrides, and audit log. Four singleton services (`AccessService`, `PermissionCatalog`, `PermissionResolver`, `AuditLogger`) implement the public API. Four Eloquent observers wire mutations into audit logging and per-request cache invalidation. An admin UI under `/access/` lets a superadmin manage everything. Full design lives in `docs/design.md`.
 
-**Tech Stack:** PHP 8.3+, Laravel components (via EVO 3.5), MySQL 8 / MariaDB 10.x, Webix Standard (GPL), PHPUnit 11, Orchestra Testbench for Laravel-package testing.
+**Tech Stack:** PHP 8.3+, Laravel components (via EVO 3.5), MySQL 8 / MariaDB 10.x, Bootstrap 5 + vanilla JS for the package's reference admin UI (MIT, no caascade), PHPUnit 11, Orchestra Testbench for Laravel-package testing. Consumer projects override views via `vendor:publish` to plug in their own UI framework (Webix Pro, Tabler, etc.).
 
 **Reference document:** [`docs/design.md`](./design.md) — read this first for full context.
 
@@ -3738,7 +3738,7 @@ git commit -m "feat(console): MigrateLegacyEvoRolesCommand for one-time legacy i
 
 ## Phase 9: HTTP layer + admin controllers
 
-The admin UI is mounted under `/access/`. Routes are defined in `src/Http/routes.php`. Each section has a controller; views are simple Webix-based blade templates.
+The admin UI is mounted under `/access/`. Routes are defined in `src/Http/routes.php`. Each section has a controller; views are simple Bootstrap 5 + vanilla JS blade templates (originally planned as Webix — see Phase 10 implementation note for the rationale of the change).
 
 ### Task 9.1: Routes file + BaseController
 
@@ -4193,9 +4193,13 @@ git commit -m "feat(http): Matrix/Users/Audit controllers"
 
 ---
 
-## Phase 10: Admin UI views (Webix Standard)
+## Phase 10: Admin UI views (Bootstrap 5 + vanilla JS)
 
-This phase creates Blade templates that render the admin UI using Webix Standard (free GPL version). The views are simple — most logic is on the server side (controllers + AJAX endpoints).
+This phase creates Blade templates that render the admin UI using **Bootstrap 5 (MIT) + vanilla JS** loaded from jsDelivr CDN. No JavaScript framework, no jQuery, no build step. The views are simple reference implementations — most logic is on the server side (controllers + AJAX endpoints).
+
+> **Implementation note (post-execution):** This phase originally targeted Webix Standard (GPL). After the views were written, the choice was reversed to Bootstrap 5 because Webix Standard's GPL caascade would force every consumer project into GPL — incompatible with proprietary projects that want to consume the package — and because consumer projects already on Webix Pro (e.g. Ddaudio) would clash with Webix Standard loaded from CDN. The actual final views in `views/` (commit `9303548`) are the Bootstrap 5 + vanilla JS implementation. Consumer projects override these via `vendor:publish --tag=evo-access-views` and rewrite them with their own UI framework. See design.md §10.6 for the full UI override pattern.
+>
+> **The Webix-based code shown below is preserved as historical context for the original plan.** The Bootstrap 5 versions in `views/*.blade.php` are the source of truth for the current package state.
 
 ### Task 10.1: Layout + 4 view templates
 

@@ -823,7 +823,7 @@ The matrix is the primary working surface for the superadmin. Layout: a left **s
 
 ### 10.3 Roles screen
 
-A simple list of roles in a Webix datatable with columns: name, label, description, user count, created date, system flag. Buttons: Create new role (opens modal with name/label/description fields), Edit selected, Clone selected (creates a new role with all grants copied), Delete selected (blocked by `ON DELETE RESTRICT` if users are assigned).
+A simple list of roles in a sortable table with columns: name, label, description, user count, created date, system flag. Buttons: Create new role (opens modal with name/label/description fields), Edit selected, Clone selected (creates a new role with all grants copied), Delete selected (blocked by `ON DELETE RESTRICT` if users are assigned).
 
 ### 10.4 Users screen
 
@@ -836,7 +836,31 @@ Search box at the top (autocomplete by EVO user fullname or login). Selected use
 
 ### 10.5 Audit log screen
 
-Webix datatable bound to `AuditLogger::search()`. Filters: actor, target user, target role, action type, date range. Each row shows: timestamp, actor, action, target, old/new value, expandable details JSON.
+A table bound to `AuditLogger::search()`. Filters: actor, target user, target role, action type, date range. Each row shows: timestamp, actor, action, target, old/new value, expandable details JSON.
+
+### 10.6 UI implementation and override pattern
+
+The package ships a **minimal reference UI** built on **Bootstrap 5 + vanilla JS**:
+
+- **Bootstrap 5.3** (MIT) loaded from jsDelivr CDN — provides layout, navbar, table, alert, badge components
+- **Vanilla JS `fetch()`** for AJAX — no jQuery, no framework
+- **Shared `eaFetch()` helper** in `views/layout.blade.php` handles 401/403 responses with toast notifications
+- **No build step** — all JS is inline in blade `<script>` tags
+
+The reference UI is intentionally functional rather than polished:
+
+- The matrix view in the package is **read-only** (loads permissions + grants but doesn't yet render checkboxes for editing)
+- The roles/users/audit views render basic Bootstrap tables wired to the JSON endpoints
+- Modal dialogs for create/edit/override are not included in the reference UI
+
+The full visual model from §10.2 (sidebar role selector, accordion modules, inline checkboxes with auto-save, colour-coded counters, meta strip) is the **target experience** that consumer projects implement via the **view override pattern**:
+
+1. Consumer runs `php artisan vendor:publish --tag=evo-access-views`
+2. Laravel copies all 5 blade files into `resources/views/vendor/evoAccess/` (or the project's equivalent path)
+3. Consumer rewrites the views using its own UI framework — Webix Pro, Tabler, AdminLTE, plain Bootstrap with htmx, etc. — keeping the same `eaFetch`-style endpoint contracts
+4. Laravel's view resolver picks up the local override automatically; package upgrades don't overwrite the customised views
+
+This separation keeps the package fully open-source (no GPL caascade from non-MIT UI libraries), allows consumer projects to use commercial frameworks they already license (e.g. Webix Pro), and lets each consumer match its existing admin look-and-feel without forking the package.
 
 ---
 
