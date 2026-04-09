@@ -109,9 +109,9 @@ https://your-ddaudio-domain.tld/access/matrix
 
 **Verify:**
 - Page loads (no 401, no 500)
-- Webix UI renders
+- Bootstrap-styled admin UI renders with a dark navbar (Roles / Matrix / Users / Audit tabs)
 - `superadmin` role appears in the left-side list
-- Clicking `superadmin` shows the `access.admin` permission row
+- Clicking `superadmin` shows the `access.admin` permission row grouped under module "access"
 
 ## Step 8: Test the audit log
 
