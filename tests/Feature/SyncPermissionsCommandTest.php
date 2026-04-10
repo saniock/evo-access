@@ -19,7 +19,7 @@ class SyncPermissionsCommandTest extends TestCase
             ['name' => 'orders.payments', 'label' => 'P', 'actions' => ['view', 'update']],
         ]);
 
-        // Count all catalog entries (includes SP-registered permissions like access.admin).
+        // Count all catalog entries (includes SP-registered permissions like access.roles etc.).
         $expectedCount = count($catalog->all());
 
         $this->artisan('evoaccess:sync-permissions')

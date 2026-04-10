@@ -66,7 +66,7 @@ class EvoAccessServiceProvider extends ServiceProvider
      *
      * Routes/views/observers always run — the actual access control
      * for the admin UI lives in BaseController::ensureAdminAccess(),
-     * which 401/403's any caller without the access.admin permission.
+     * which 401/403's any caller without the relevant access.* permission.
      *
      * The "soft rollout" gate sits inside the EVO manager-menu plugin
      * (plugins/evoAccessPlugin.php) and reads
@@ -109,9 +109,19 @@ class EvoAccessServiceProvider extends ServiceProvider
         $this->app->make(PermissionCatalog::class)
             ->registerPermissions('access', [
                 [
-                    'name' => 'access.admin',
-                    'label' => 'Access — administration',
-                    'actions' => ['view', 'update'],
+                    'name'    => 'access.roles',
+                    'label'   => 'Access — roles & matrix',
+                    'actions' => ['view', 'edit'],
+                ],
+                [
+                    'name'    => 'access.users',
+                    'label'   => 'Access — user permissions',
+                    'actions' => ['view', 'edit'],
+                ],
+                [
+                    'name'    => 'access.audit',
+                    'label'   => 'Access — audit log',
+                    'actions' => ['view'],
                 ],
             ]);
     }
