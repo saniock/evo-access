@@ -6,6 +6,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
+use Saniock\EvoAccess\Models\RolePermissionAction;
 use Saniock\EvoAccess\Models\UserOverride;
 use Saniock\EvoAccess\Models\UserRole;
 use Saniock\EvoAccess\Services\AccessService;
@@ -22,6 +23,72 @@ class UsersController extends BaseController
     public function index()
     {
         return view('evoAccess::users');
+    }
+
+    public function data(): array
+    {
+        $userRoles = UserRole::with('role')->get()->keyBy('user_id');
+        $userIds = $userRoles->keys()->all();
+
+        // Role grant counts per role_id
+        $roleGrantCounts = RolePermissionAction::query()
+            ->join('ea_permissions', 'ea_permissions.id', '=', 'ea_role_permission_actions.permission_id')
+            ->where('ea_permissions.is_orphaned', false)
+            ->selectRaw('role_id, COUNT(*) as cnt')
+            ->groupBy('role_id')
+            ->pluck('cnt', 'role_id');
+
+        // Override counts per user
+        $overrideGrants = UserOverride::query()
+            ->whereIn('user_id', $userIds)
+            ->where('mode', 'grant')
+            ->selectRaw('user_id, COUNT(*) as cnt')
+            ->groupBy('user_id')
+            ->pluck('cnt', 'user_id');
+
+        $overrideRevokes = UserOverride::query()
+            ->whereIn('user_id', $userIds)
+            ->where('mode', 'revoke')
+            ->selectRaw('user_id, COUNT(*) as cnt')
+            ->groupBy('user_id')
+            ->pluck('cnt', 'user_id');
+
+        $resolver = $this->access->getResolver();
+
+        $result = [];
+        foreach ($userRoles as $userId => $ur) {
+            $role = $ur->role;
+            $roleGrants = $roleGrantCounts[$role->id] ?? 0;
+            $oGrants = $overrideGrants[$userId] ?? 0;
+            $oRevokes = $overrideRevokes[$userId] ?? 0;
+            $effectiveCount = max(0, $roleGrants + $oGrants - $oRevokes);
+
+            // Modules where user has effective grants
+            $permMap = $resolver->loadForUser($userId);
+            $modules = [];
+            if (!isset($permMap['__is_system'])) {
+                foreach ($permMap as $permName => $actions) {
+                    $module = explode('.', $permName)[0];
+                    if (!in_array($module, $modules) && collect($actions)->contains(true)) {
+                        $modules[] = $module;
+                    }
+                }
+            }
+
+            $result[] = [
+                'user_id' => $userId,
+                'role_id' => $role->id,
+                'role_name' => $role->name,
+                'role_label' => $role->label,
+                'is_system' => $role->is_system,
+                'modules' => $modules,
+                'effective_grant_count' => $effectiveCount,
+                'override_grant_count' => $oGrants,
+                'override_revoke_count' => $oRevokes,
+            ];
+        }
+
+        return $result;
     }
 
     public function search(Request $request): JsonResponse

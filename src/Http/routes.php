@@ -40,6 +40,7 @@ Route::group([
 
     // Users
     Route::get('users', [UsersController::class, 'index'])->name('users.index');
+    Route::get('users/data', [UsersController::class, 'data'])->name('users.data');
     Route::get('users/search', [UsersController::class, 'search'])->name('users.search');
     Route::get('users/{user_id}/effective', [UsersController::class, 'effective'])->name('users.effective');
     Route::post('users/{user_id}/assign', [UsersController::class, 'assign'])->name('users.assign');

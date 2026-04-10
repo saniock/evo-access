@@ -20,6 +20,11 @@ class AccessService implements AccessServiceInterface
     ) {
     }
 
+    public function getResolver(): PermissionResolver
+    {
+        return $this->resolver;
+    }
+
     public function can(string $permission, string $action, int $userId): bool
     {
         return $this->resolver->userHas($userId, $permission, $action);

@@ -3,6 +3,7 @@
 namespace Saniock\EvoAccess\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 /**
  * User → role assignment (flat model: one user has exactly one role).
@@ -35,4 +36,9 @@ class UserRole extends Model
     protected $casts = [
         'assigned_at' => 'datetime',
     ];
+
+    public function role(): BelongsTo
+    {
+        return $this->belongsTo(Role::class, 'role_id');
+    }
 }
