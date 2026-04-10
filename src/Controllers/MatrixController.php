@@ -7,9 +7,16 @@ use Illuminate\Http\Request;
 use Saniock\EvoAccess\Models\Permission;
 use Saniock\EvoAccess\Models\Role;
 use Saniock\EvoAccess\Models\RolePermissionAction;
+use Saniock\EvoAccess\Services\AccessService;
 
 class MatrixController extends BaseController
 {
+    public function __construct(AccessService $access)
+    {
+        parent::__construct($access);
+        $this->ensureAccess('access.roles');
+    }
+
     public function index()
     {
         return view('evoAccess::matrix');

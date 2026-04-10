@@ -65,7 +65,7 @@ class EvoAccessServiceProvider extends ServiceProvider
      * observers, console commands, EVO manager-menu plugin.
      *
      * Routes/views/observers always run — the actual access control
-     * for the admin UI lives in BaseController::ensureAdminAccess(),
+     * for the admin UI lives in BaseController::ensureAccess(),
      * which 401/403's any caller without the relevant access.* permission.
      *
      * The "soft rollout" gate sits inside the EVO manager-menu plugin

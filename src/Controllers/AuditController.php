@@ -4,10 +4,17 @@ namespace Saniock\EvoAccess\Controllers;
 
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Saniock\EvoAccess\Services\AccessService;
 use Saniock\EvoAccess\Services\AuditLogger;
 
 class AuditController extends BaseController
 {
+    public function __construct(AccessService $access)
+    {
+        parent::__construct($access);
+        $this->ensureAccess('access.audit');
+    }
+
     public function index()
     {
         return view('evoAccess::audit');

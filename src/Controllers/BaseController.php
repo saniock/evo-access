@@ -3,7 +3,6 @@
 namespace Saniock\EvoAccess\Controllers;
 
 use Illuminate\Routing\Controller;
-use Saniock\EvoAccess\Exceptions\AccessDeniedException;
 use Saniock\EvoAccess\Services\AccessService;
 
 abstract class BaseController extends Controller
@@ -11,29 +10,7 @@ abstract class BaseController extends Controller
     public function __construct(
         protected readonly AccessService $access,
     ) {
-        $this->ensureAdminAccess();
-    }
-
-    /**
-     * The Access admin UI is gated by its own permission `access.admin` action `view`.
-     * Superadmin (is_system=1) bypasses everything via the resolver short-circuit.
-     */
-    private function ensureAdminAccess(): void
-    {
-        $userId = $this->currentUserId();
-
-        if ($userId === 0) {
-            abort(401, 'Login required.');
-        }
-
-        if (!$this->access->can('access.admin', 'view', $userId)) {
-            throw new AccessDeniedException(
-                'Access denied — you do not have permission to manage access control.',
-                permission: 'access.admin',
-                action: 'view',
-                userId: $userId,
-            );
-        }
+        // Subclasses call ensureAccess() with their page's permission
     }
 
     protected function currentUserId(): int
@@ -42,5 +19,30 @@ abstract class BaseController extends Controller
             return (int) evo()->getLoginUserID('mgr');
         }
         return 0;
+    }
+
+    /**
+     * Gate the current request: the caller must be authenticated and
+     * hold `view` on the given permission slug.
+     */
+    protected function ensureAccess(string $permission): void
+    {
+        $userId = $this->currentUserId();
+
+        if ($userId <= 0) {
+            abort(401, 'Not authenticated.');
+        }
+
+        if (! $this->access->can($permission, 'view', $userId)) {
+            abort(403, 'Access denied.');
+        }
+    }
+
+    /**
+     * Check whether the current user holds `edit` on the given permission.
+     */
+    protected function canEdit(string $permission): bool
+    {
+        return $this->access->can($permission, 'edit', $this->currentUserId());
     }
 }

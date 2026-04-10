@@ -8,10 +8,17 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 use Saniock\EvoAccess\Models\UserOverride;
 use Saniock\EvoAccess\Models\UserRole;
+use Saniock\EvoAccess\Services\AccessService;
 use Saniock\EvoAccess\Services\PermissionResolver;
 
 class UsersController extends BaseController
 {
+    public function __construct(AccessService $access)
+    {
+        parent::__construct($access);
+        $this->ensureAccess('access.users');
+    }
+
     public function index()
     {
         return view('evoAccess::users');
