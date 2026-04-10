@@ -31,6 +31,7 @@ Route::group([
     Route::put('roles/{id}', [RolesController::class, 'update'])->name('roles.update');
     Route::delete('roles/{id}', [RolesController::class, 'destroy'])->name('roles.destroy');
     Route::post('roles/{id}/clone', [RolesController::class, 'clone'])->name('roles.clone');
+    Route::post('roles/{id}/reassign-and-delete', [RolesController::class, 'reassignAndDelete'])->name('roles.reassignAndDelete');
 
     // Matrix
     Route::get('matrix', [MatrixController::class, 'index'])->name('matrix.index');

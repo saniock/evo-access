@@ -4,9 +4,12 @@ namespace Saniock\EvoAccess\Controllers;
 
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Saniock\EvoAccess\Models\Role;
 use Saniock\EvoAccess\Models\RolePermissionAction;
+use Saniock\EvoAccess\Models\UserRole;
 use Saniock\EvoAccess\Services\AccessService;
+use Saniock\EvoAccess\Services\AuditLogger;
 
 class RolesController extends BaseController
 {
@@ -91,6 +94,37 @@ class RolesController extends BaseController
         } catch (\Illuminate\Database\QueryException $e) {
             return response()->json(['error' => 'Cannot delete role with assigned users — reassign them first'], 409);
         }
+
+        return response()->json(['ok' => true]);
+    }
+
+    public function reassignAndDelete(Request $request, int $id): JsonResponse
+    {
+        $role = Role::findOrFail($id);
+
+        if ($role->is_system) {
+            return response()->json(['error' => 'System role cannot be deleted'], 403);
+        }
+
+        $newRoleId = (int) $request->input('new_role_id');
+        $newRole = Role::findOrFail($newRoleId);
+        $actorId = $this->currentUserId();
+        $audit = app(AuditLogger::class);
+
+        DB::transaction(function () use ($role, $newRole, $actorId, $audit) {
+            $assignments = UserRole::where('role_id', $role->id)->get();
+
+            foreach ($assignments as $assignment) {
+                $audit->logUserRoleChanged($actorId, $assignment->user_id, $role->id, $newRole->id);
+                $assignment->update([
+                    'role_id' => $newRole->id,
+                    'assigned_by' => $actorId,
+                    'assigned_at' => now(),
+                ]);
+            }
+
+            $role->delete();
+        });
 
         return response()->json(['ok' => true]);
     }
