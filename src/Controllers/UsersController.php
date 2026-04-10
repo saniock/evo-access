@@ -6,10 +6,12 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
+use Saniock\EvoAccess\Models\Permission;
 use Saniock\EvoAccess\Models\RolePermissionAction;
 use Saniock\EvoAccess\Models\UserOverride;
 use Saniock\EvoAccess\Models\UserRole;
 use Saniock\EvoAccess\Services\AccessService;
+use Saniock\EvoAccess\Services\AuditLogger;
 use Saniock\EvoAccess\Services\PermissionResolver;
 
 class UsersController extends BaseController
@@ -125,6 +127,69 @@ class UsersController extends BaseController
         ]);
     }
 
+    public function matrix(int $userId): array
+    {
+        $userRole = UserRole::with('role')->find($userId);
+        $role = $userRole?->role;
+
+        // All active permissions, grouped by module
+        $permissions = Permission::active()->orderBy('module')->orderBy('name')->get();
+
+        // Role grants for this user's role
+        $roleGrants = [];
+        if ($role && !$role->is_system) {
+            $roleGrants = RolePermissionAction::query()
+                ->where('role_id', $role->id)
+                ->get()
+                ->groupBy('permission_id')
+                ->map(fn ($rows) => $rows->pluck('action')->all())
+                ->all();
+        }
+
+        // User overrides
+        $overrides = UserOverride::query()
+            ->where('user_id', $userId)
+            ->get()
+            ->groupBy('permission_id')
+            ->map(fn ($rows) => $rows->map(fn ($o) => [
+                'action' => $o->action,
+                'mode'   => $o->mode,
+                'reason' => $o->reason,
+            ])->all())
+            ->all();
+
+        // Group by module
+        $modules = [];
+        foreach ($permissions->groupBy('module') as $moduleName => $modulePerms) {
+            $permsData = [];
+            foreach ($modulePerms as $perm) {
+                $permsData[] = [
+                    'id'          => $perm->id,
+                    'name'        => $perm->name,
+                    'label'       => $perm->label,
+                    'actions'     => $perm->actions,
+                    'role_grants' => $roleGrants[$perm->id] ?? [],
+                    'overrides'   => $overrides[$perm->id] ?? [],
+                ];
+            }
+            $modules[] = [
+                'module'      => $moduleName,
+                'permissions' => $permsData,
+            ];
+        }
+
+        return [
+            'user_id' => $userId,
+            'role'    => $role ? [
+                'id'        => $role->id,
+                'name'      => $role->name,
+                'label'     => $role->label,
+                'is_system' => $role->is_system,
+            ] : null,
+            'modules' => $modules,
+        ];
+    }
+
     public function assign(Request $request, int $user_id): JsonResponse
     {
         $data = $request->validate(['role_id' => 'required|integer|exists:ea_roles,id']);
@@ -143,6 +208,77 @@ class UsersController extends BaseController
         );
 
         return response()->json(['ok' => true]);
+    }
+
+    /**
+     * Batch-replace all overrides for a user in a single DB transaction.
+     *
+     * Optionally reassigns role if role_id differs from current.
+     * Logs each individual add/remove to audit.
+     * Used by the Save button in the Webix user matrix popup.
+     */
+    public function batchOverrides(Request $request, int $userId): array
+    {
+        $roleId = (int) $request->input('role_id');
+        $overrides = $request->input('overrides', []);
+        $actorId = $this->currentUserId();
+        $audit = app(AuditLogger::class);
+
+        DB::transaction(function () use ($userId, $roleId, $overrides, $actorId, $audit) {
+            // 1. Reassign role if changed
+            $currentRole = UserRole::find($userId);
+            if ($currentRole && $currentRole->role_id !== $roleId) {
+                $audit->logUserRoleChanged($actorId, $userId, $currentRole->role_id, $roleId);
+                $currentRole->update([
+                    'role_id'     => $roleId,
+                    'assigned_by' => $actorId,
+                    'assigned_at' => now(),
+                ]);
+            } elseif (!$currentRole && $roleId) {
+                UserRole::create([
+                    'user_id'     => $userId,
+                    'role_id'     => $roleId,
+                    'assigned_by' => $actorId,
+                    'assigned_at' => now(),
+                ]);
+                $audit->logUserAssigned($actorId, $userId, $roleId);
+            }
+
+            // 2. Existing overrides for diff
+            $existing = UserOverride::where('user_id', $userId)->get();
+
+            // 3. Delete all existing
+            UserOverride::where('user_id', $userId)->delete();
+
+            // 4. Insert new
+            foreach ($overrides as $o) {
+                UserOverride::create([
+                    'user_id'       => $userId,
+                    'permission_id' => (int) $o['permission_id'],
+                    'action'        => $o['action'],
+                    'mode'          => $o['mode'],
+                    'reason'        => $o['reason'] ?? null,
+                    'created_by'    => $actorId,
+                ]);
+            }
+
+            // 5. Audit diff
+            $existingKeys = $existing->map(fn ($e) => "{$e->permission_id}:{$e->action}:{$e->mode}")->all();
+            $newKeys = collect($overrides)->map(fn ($o) => "{$o['permission_id']}:{$o['action']}:{$o['mode']}")->all();
+
+            foreach (array_diff($newKeys, $existingKeys) as $added) {
+                [$permId, $action, $mode] = explode(':', $added);
+                $audit->logOverrideAdded($actorId, $userId, (int) $permId, $action, $mode, null);
+            }
+            foreach (array_diff($existingKeys, $newKeys) as $removed) {
+                [$permId, $action] = explode(':', $removed);
+                $audit->logOverrideRemoved($actorId, $userId, (int) $permId, $action);
+            }
+        });
+
+        $this->access->getResolver()->forgetUser($userId);
+
+        return ['success' => true];
     }
 
     public function addOverride(Request $request, int $user_id): JsonResponse

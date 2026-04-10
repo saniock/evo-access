@@ -43,8 +43,10 @@ Route::group([
     Route::get('users/data', [UsersController::class, 'data'])->name('users.data');
     Route::get('users/search', [UsersController::class, 'search'])->name('users.search');
     Route::get('users/{user_id}/effective', [UsersController::class, 'effective'])->name('users.effective');
+    Route::get('users/{user_id}/matrix', [UsersController::class, 'matrix'])->name('users.matrix');
     Route::post('users/{user_id}/assign', [UsersController::class, 'assign'])->name('users.assign');
     Route::post('users/{user_id}/overrides', [UsersController::class, 'addOverride'])->name('users.overrides.add');
+    Route::post('users/{user_id}/overrides/batch', [UsersController::class, 'batchOverrides'])->name('users.overrides.batch');
     Route::delete('users/{user_id}/overrides/{override_id}', [UsersController::class, 'removeOverride'])->name('users.overrides.remove');
 
     // Audit
