@@ -4,6 +4,8 @@ namespace Saniock\EvoAccess\Controllers;
 
 use Illuminate\Routing\Controller;
 use Saniock\EvoAccess\Services\AccessService;
+use Symfony\Component\HttpKernel\Exception\AccessDeniedHttpException;
+use Symfony\Component\HttpKernel\Exception\UnauthorizedHttpException;
 
 abstract class BaseController extends Controller
 {
@@ -30,17 +32,23 @@ abstract class BaseController extends Controller
      * given permission slug. Manager authentication itself is handled
      * at the route level by the `managerauth` middleware — do not try
      * to re-implement it here.
+     *
+     * NOTE: throws Symfony HTTP exceptions directly instead of using
+     * Laravel's abort() helper. Some consumer projects override the
+     * global abort() function (or ship their own helper autoloaded
+     * before Laravel's), turning it into a no-op and silently letting
+     * unauthorised requests through. Direct throw is immune to that.
      */
     protected function ensureAccess(string $permission): void
     {
         $userId = $this->currentUserId();
 
         if ($userId <= 0) {
-            abort(401, 'Not authenticated.');
+            throw new UnauthorizedHttpException('', 'Not authenticated.');
         }
 
         if (! $this->access->can($permission, 'view', $userId)) {
-            abort(403, 'Access denied.');
+            throw new AccessDeniedHttpException('Access denied.');
         }
     }
 
