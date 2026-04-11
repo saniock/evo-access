@@ -40,7 +40,7 @@ class RolesController extends BaseController
     public function data(): JsonResponse
     {
         $roles = Role::query()
-            ->withCount('userAssignments')
+            ->withCount(['userAssignments as user_count'])
             ->orderBy('name')
             ->get(['id', 'name', 'label', 'description', 'is_system', 'created_at', 'updated_at']);
 
