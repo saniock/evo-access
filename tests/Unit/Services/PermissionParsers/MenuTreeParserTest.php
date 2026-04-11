@@ -67,13 +67,73 @@ class MenuTreeParserTest extends TestCase
 
         $this->assertCount(2, $permissions);
 
+        // Labels are prefixed with parent group titles joined by " → "
+        // so UI consumers can disambiguate identical leaf names across
+        // different groups (e.g. "Dracar → Products" vs "Restal → Products").
         $this->assertSame('orders.sales.invoices', $permissions[0]['name']);
-        $this->assertSame('Invoices', $permissions[0]['label']);
+        $this->assertSame('Sales → Invoices', $permissions[0]['label']);
         $this->assertSame(['view', 'create', 'void'], $permissions[0]['actions']);
 
         $this->assertSame('orders.sales.gift-cards', $permissions[1]['name']);
-        $this->assertSame('Gift cards', $permissions[1]['label']);
+        $this->assertSame('Sales → Gift cards', $permissions[1]['label']);
         $this->assertSame(['view', 'edit'], $permissions[1]['actions']);
+    }
+
+    public function test_top_level_leaf_label_has_no_prefix(): void
+    {
+        $config = [
+            'menu' => [
+                [
+                    'id'      => 'orders',
+                    'title'   => 'Orders',
+                    'actions' => ['view'],
+                ],
+            ],
+        ];
+
+        $permissions = $this->parser->extract($config, 'orders');
+
+        // Module-root permissions (no parent group) keep their bare title.
+        $this->assertSame('Orders', $permissions[0]['label']);
+    }
+
+    public function test_deeply_nested_label_joins_all_parent_titles(): void
+    {
+        $config = [
+            'menu' => [
+                [
+                    'id'    => 'dracar',
+                    'title' => 'Dracar',
+                    'items' => [
+                        [
+                            'id'      => 'products',
+                            'title'   => 'Товари',
+                            'actions' => ['view', 'edit'],
+                        ],
+                    ],
+                ],
+                [
+                    'id'    => 'restal',
+                    'title' => 'Restal',
+                    'items' => [
+                        [
+                            'id'      => 'products',
+                            'title'   => 'Товари',
+                            'actions' => ['view', 'edit'],
+                        ],
+                    ],
+                ],
+            ],
+        ];
+
+        $permissions = $this->parser->extract($config, 'competitors');
+
+        $this->assertCount(2, $permissions);
+
+        // Two leaves with identical title "Товари" are disambiguated by
+        // their parent group titles ("Dracar" and "Restal").
+        $this->assertSame('Dracar → Товари', $permissions[0]['label']);
+        $this->assertSame('Restal → Товари', $permissions[1]['label']);
     }
 
     public function test_group_itself_does_not_become_a_permission(): void
@@ -200,7 +260,7 @@ class MenuTreeParserTest extends TestCase
         $this->assertSame('mod.level1.level2.level3', $permissions[0]['name']);
     }
 
-    public function test_label_falls_back_to_slug_when_title_missing(): void
+    public function test_label_falls_back_to_item_id_when_title_missing(): void
     {
         $config = [
             'menu' => [
@@ -214,6 +274,9 @@ class MenuTreeParserTest extends TestCase
         $permissions = $this->parser->extract($config, 'mod');
 
         $this->assertCount(1, $permissions);
-        $this->assertSame('mod.headless', $permissions[0]['label']);
+        // When title is missing the parser falls back to the item's id
+        // (not the fully-qualified slug) because the label is meant to
+        // be a human-readable display string, not a machine identifier.
+        $this->assertSame('headless', $permissions[0]['label']);
     }
 }

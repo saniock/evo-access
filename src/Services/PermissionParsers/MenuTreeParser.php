@@ -38,17 +38,20 @@ class MenuTreeParser implements ParserInterface
     {
         $items = $config['menu'] ?? [];
         $out = [];
-        $this->walk($items, $moduleSlug, $out);
+        $this->walk($items, $moduleSlug, [], $out);
         return $out;
     }
 
     /**
-     * @param  array  $items       menu subtree being walked
-     * @param  string $pathSoFar   slug accumulated from module down to
-     *                             (but not including) the current item
-     * @param  array  $out         collector, passed by reference
+     * @param  array  $items      menu subtree being walked
+     * @param  string $pathSoFar  slug accumulated from module down to
+     *                            (but not including) the current item
+     * @param  array  $labelPath  titles of parent groups (used to build
+     *                            human-readable prefixed labels like
+     *                            "Dracar → Товари")
+     * @param  array  $out        collector, passed by reference
      */
-    private function walk(array $items, string $pathSoFar, array &$out): void
+    private function walk(array $items, string $pathSoFar, array $labelPath, array &$out): void
     {
         foreach ($items as $item) {
             if (!isset($item['id']) || $item['id'] === '') {
@@ -56,9 +59,16 @@ class MenuTreeParser implements ParserInterface
             }
 
             $slug = $pathSoFar . '.' . $item['id'];
+            $title = $item['title'] ?? $item['id'];
 
             if (array_key_exists('items', $item) && is_array($item['items'])) {
-                $this->walk($item['items'], $slug, $out);
+                // Grouping folder: append title to label path and recurse.
+                $this->walk(
+                    $item['items'],
+                    $slug,
+                    [...$labelPath, $title],
+                    $out,
+                );
                 continue;
             }
 
@@ -66,9 +76,16 @@ class MenuTreeParser implements ParserInterface
                 continue;
             }
 
+            // Build human-readable label by joining parent titles with " → ".
+            // For a top-level permission (no parent groups), this is just
+            // the item's own title.
+            $fullLabel = empty($labelPath)
+                ? $title
+                : implode(' → ', $labelPath) . ' → ' . $title;
+
             $out[] = [
                 'name'    => $slug,
-                'label'   => $item['title'] ?? $slug,
+                'label'   => $fullLabel,
                 'actions' => array_values($item['actions']),
             ];
         }

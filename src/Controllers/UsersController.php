@@ -177,6 +177,13 @@ class UsersController extends BaseController
         // Group by module
         $modules = [];
         foreach ($permissions->groupBy('module') as $moduleName => $modulePerms) {
+            // Resolve a human-readable module label. Convention: the
+            // top-level "{module}.{module}" permission carries the
+            // display title for the module in its label. Fall back to
+            // the module slug if no such permission exists.
+            $rootPerm = $modulePerms->firstWhere('name', $moduleName . '.' . $moduleName);
+            $moduleLabel = $rootPerm?->label ?? $moduleName;
+
             $permsData = [];
             foreach ($modulePerms as $perm) {
                 $permsData[] = [
@@ -189,8 +196,9 @@ class UsersController extends BaseController
                 ];
             }
             $modules[] = [
-                'module'      => $moduleName,
-                'permissions' => $permsData,
+                'module'       => $moduleName,
+                'module_label' => $moduleLabel,
+                'permissions'  => $permsData,
             ];
         }
 

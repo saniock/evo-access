@@ -87,4 +87,40 @@ class UsersMatrixEndpointTest extends TestCase
         $this->assertEquals(999, $response['user_id']);
         $this->assertNull($response['role']);
     }
+
+    public function test_module_label_comes_from_root_permission(): void
+    {
+        // The "module.module" permission's label is used as the
+        // human-readable module name in the matrix response.
+        Permission::create([
+            'name' => 'competitors.competitors', 'label' => 'Конкуренти',
+            'module' => 'competitors', 'actions' => ['view'],
+        ]);
+        Permission::create([
+            'name' => 'competitors.dracar.products', 'label' => 'Dracar → Товари',
+            'module' => 'competitors', 'actions' => ['view', 'edit'],
+        ]);
+
+        $controller = $this->app->make(UsersController::class);
+        $response = $controller->matrix(999);
+
+        $compMod = collect($response['modules'])->firstWhere('module', 'competitors');
+        $this->assertNotNull($compMod);
+        $this->assertEquals('Конкуренти', $compMod['module_label']);
+    }
+
+    public function test_module_label_falls_back_to_slug_when_no_root_permission(): void
+    {
+        Permission::create([
+            'name' => 'widgets.gadgets.thingies', 'label' => 'Thingies',
+            'module' => 'widgets', 'actions' => ['view'],
+        ]);
+
+        $controller = $this->app->make(UsersController::class);
+        $response = $controller->matrix(999);
+
+        $widgetsMod = collect($response['modules'])->firstWhere('module', 'widgets');
+        $this->assertNotNull($widgetsMod);
+        $this->assertEquals('widgets', $widgetsMod['module_label']);
+    }
 }

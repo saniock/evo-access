@@ -92,11 +92,11 @@ PHP);
         ]);
         $this->assertDatabaseHas('ea_permissions', [
             'name'  => 'orders.sales.invoices',
-            'label' => 'Invoices',
+            'label' => 'Sales → Invoices',
         ]);
         $this->assertDatabaseHas('ea_permissions', [
             'name'  => 'orders.sales.gift-cards',
-            'label' => 'Gift cards',
+            'label' => 'Sales → Gift cards',
         ]);
         $this->assertDatabaseHas('ea_permissions', [
             'name'  => 'inventory.stock',

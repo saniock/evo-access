@@ -46,15 +46,26 @@ class MatrixController extends BaseController
             ->get(['permission_id', 'action'])
             ->groupBy('permission_id');
 
+        // Build a module_slug => module_label map from the top-level
+        // "{module}.{module}" permissions so the UI can display
+        // human-readable module names in the matrix grid.
+        $moduleLabels = [];
+        foreach ($permissions as $perm) {
+            if ($perm->name === $perm->module . '.' . $perm->module) {
+                $moduleLabels[$perm->module] = $perm->label;
+            }
+        }
+
         return response()->json([
-            'role'        => [
+            'role'          => [
                 'id'        => $role->id,
                 'name'      => $role->name,
                 'label'     => $role->label,
                 'is_system' => (bool) $role->is_system,
             ],
-            'permissions' => $permissions,
-            'grants'      => $grants,
+            'permissions'   => $permissions,
+            'grants'        => $grants,
+            'module_labels' => (object) $moduleLabels,
         ]);
     }
 
