@@ -2,7 +2,6 @@
 
 use Illuminate\Support\Facades\Route;
 use Saniock\EvoAccess\Controllers\AuditController;
-use Saniock\EvoAccess\Controllers\DebugController;
 use Saniock\EvoAccess\Controllers\DocsController;
 use Saniock\EvoAccess\Controllers\MatrixController;
 use Saniock\EvoAccess\Controllers\RolesController;
@@ -74,10 +73,4 @@ Route::group([
         Route::get('docs', [DocsController::class, 'index'])->name('docs.index');
         Route::get('docs/{section}', [DocsController::class, 'index'])->name('docs.section');
     });
-
-    // TEMP: diagnostic — remove when the "full access" bug is resolved.
-    // Deliberately NOT under eaaccess.permission so we can diagnose
-    // even when permissions are broken.
-    Route::get('_diag', [DebugController::class, 'diag'])->name('_diag');
-    Route::get('_diag/gate', [DebugController::class, 'gate'])->name('_diag.gate');
 });
