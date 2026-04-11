@@ -29,8 +29,19 @@ class UsersController extends BaseController
 
     public function data(): array
     {
+        // All EVO managers (role > 0) — include users with NO evo-access role
+        // so admins can assign roles to new managers from the Users page.
+        $managers = collect();
+        if (Schema::hasTable('user_attributes')) {
+            $managers = DB::table('user_attributes')
+                ->where('role', '>', 0)
+                ->orderBy('fullname')
+                ->get(['internalKey as user_id', 'fullname as user_name'])
+                ->keyBy('user_id');
+        }
+
         $userRoles = UserRole::with('role')->get()->keyBy('user_id');
-        $userIds = $userRoles->keys()->all();
+        $userIds = $managers->keys()->all();
 
         // Role grant counts per role_id
         $roleGrantCounts = RolePermissionAction::query()
@@ -58,31 +69,36 @@ class UsersController extends BaseController
         $resolver = $this->access->getResolver();
 
         $result = [];
-        foreach ($userRoles as $userId => $ur) {
-            $role = $ur->role;
-            $roleGrants = $roleGrantCounts[$role->id] ?? 0;
+        foreach ($managers as $userId => $mgr) {
+            $ur = $userRoles->get($userId);
+            $role = $ur?->role;
+
+            $roleGrants = $role ? ($roleGrantCounts[$role->id] ?? 0) : 0;
             $oGrants = $overrideGrants[$userId] ?? 0;
             $oRevokes = $overrideRevokes[$userId] ?? 0;
             $effectiveCount = max(0, $roleGrants + $oGrants - $oRevokes);
 
-            // Modules where user has effective grants
-            $permMap = $resolver->loadForUser($userId);
+            // Modules where user has effective grants (only if user has a role)
             $modules = [];
-            if (!isset($permMap['__is_system'])) {
-                foreach ($permMap as $permName => $actions) {
-                    $module = explode('.', $permName)[0];
-                    if (!in_array($module, $modules) && collect($actions)->contains(true)) {
-                        $modules[] = $module;
+            if ($role) {
+                $permMap = $resolver->loadForUser($userId);
+                if (!isset($permMap['__is_system'])) {
+                    foreach ($permMap as $permName => $actions) {
+                        $module = explode('.', $permName)[0];
+                        if (!in_array($module, $modules) && collect($actions)->contains(true)) {
+                            $modules[] = $module;
+                        }
                     }
                 }
             }
 
             $result[] = [
-                'user_id' => $userId,
-                'role_id' => $role->id,
-                'role_name' => $role->name,
-                'role_label' => $role->label,
-                'is_system' => $role->is_system,
+                'user_id' => (int) $userId,
+                'user_name' => $mgr->user_name ?: 'Manager #' . $userId,
+                'role_id' => $role?->id,
+                'role_name' => $role?->name,
+                'role_label' => $role?->label,
+                'is_system' => $role?->is_system ?? false,
                 'modules' => $modules,
                 'effective_grant_count' => $effectiveCount,
                 'override_grant_count' => $oGrants,
