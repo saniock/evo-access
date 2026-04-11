@@ -86,7 +86,46 @@ class UsersDataEndpointTest extends TestCase
         $this->assertEquals(2, $user['effective_grant_count']); // 1 role grant + 1 override grant
         $this->assertEquals(1, $user['override_grant_count']);
         $this->assertEquals(0, $user['override_revoke_count']);
-        $this->assertContains('orders', $user['modules']);
+
+        // modules now returns array of {slug, label} pairs.
+        // "orders.orders" is its own root permission so its label ("Orders")
+        // is used as the module display name.
+        $this->assertCount(1, $user['modules']);
+        $this->assertEquals('orders', $user['modules'][0]['slug']);
+        $this->assertEquals('Orders', $user['modules'][0]['label']);
+    }
+
+    public function test_modules_use_human_label_when_root_permission_exists(): void
+    {
+        $this->seedManager(1, 'Admin');
+        $this->seedManager(20, 'Bob');
+
+        $role = Role::create(['name' => 'viewer', 'label' => 'Viewer', 'is_system' => false]);
+
+        // Root permission "competitors.competitors" with Ukrainian label
+        $root = Permission::create([
+            'name' => 'competitors.competitors', 'label' => 'Конкуренти',
+            'module' => 'competitors', 'actions' => ['view'],
+        ]);
+        $child = Permission::create([
+            'name' => 'competitors.dracar.products', 'label' => 'Dracar → Товари',
+            'module' => 'competitors', 'actions' => ['view'],
+        ]);
+
+        RolePermissionAction::create([
+            'role_id' => $role->id, 'permission_id' => $child->id,
+            'action' => 'view', 'granted_at' => now(),
+        ]);
+        UserRole::create(['user_id' => 20, 'role_id' => $role->id, 'assigned_at' => now()]);
+
+        $controller = $this->app->make(UsersController::class);
+        $response = $controller->data();
+
+        $user = collect($response)->firstWhere('user_id', 20);
+        $this->assertNotNull($user);
+        $this->assertCount(1, $user['modules']);
+        $this->assertEquals('competitors', $user['modules'][0]['slug']);
+        $this->assertEquals('Конкуренти', $user['modules'][0]['label']);
     }
 
     public function test_returns_all_managers_including_those_without_role(): void

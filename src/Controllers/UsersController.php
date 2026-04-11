@@ -68,6 +68,17 @@ class UsersController extends BaseController
 
         $resolver = $this->access->getResolver();
 
+        // Resolve module slug => human label using the "{module}.{module}"
+        // root permission pattern. Falls back to the slug if no root
+        // permission exists for a module. Filtering in PHP rather than
+        // SQL so we don't rely on vendor-specific string functions.
+        $moduleLabels = [];
+        foreach (Permission::active()->get(['name', 'module', 'label']) as $perm) {
+            if ($perm->name === $perm->module . '.' . $perm->module) {
+                $moduleLabels[$perm->module] = $perm->label;
+            }
+        }
+
         $result = [];
         foreach ($managers as $userId => $mgr) {
             $ur = $userRoles->get($userId);
@@ -78,15 +89,22 @@ class UsersController extends BaseController
             $oRevokes = $overrideRevokes[$userId] ?? 0;
             $effectiveCount = max(0, $roleGrants + $oGrants - $oRevokes);
 
-            // Modules where user has effective grants (only if user has a role)
+            // Modules where user has effective grants (only if user has a role).
+            // Returns array of {slug, label} objects so the UI can display
+            // human-readable module names instead of raw slugs.
             $modules = [];
             if ($role) {
                 $permMap = $resolver->loadForUser($userId);
                 if (!isset($permMap['__is_system'])) {
+                    $seen = [];
                     foreach ($permMap as $permName => $actions) {
-                        $module = explode('.', $permName)[0];
-                        if (!in_array($module, $modules) && collect($actions)->contains(true)) {
-                            $modules[] = $module;
+                        $slug = explode('.', $permName)[0];
+                        if (!in_array($slug, $seen, true) && collect($actions)->contains(true)) {
+                            $seen[] = $slug;
+                            $modules[] = [
+                                'slug'  => $slug,
+                                'label' => $moduleLabels[$slug] ?? $slug,
+                            ];
                         }
                     }
                 }
