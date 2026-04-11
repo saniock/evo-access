@@ -26,11 +26,19 @@ abstract class BaseController extends Controller
     }
 
     /**
-     * Gate the current request: the caller must be authenticated and
-     * hold `view` on the given permission slug.
+     * Gate the current request: the caller must have an active EVO
+     * manager session AND hold `view` on the given permission slug.
+     *
+     * Explicitly checks $_SESSION['mgrValidated'] rather than relying
+     * solely on evo()->getLoginUserID('mgr'), which can return a stale
+     * ID from a dead session and let unauthenticated requests through.
      */
     protected function ensureAccess(string $permission): void
     {
+        if (! $this->isManagerAuthenticated()) {
+            abort(401, 'Not authenticated.');
+        }
+
         $userId = $this->currentUserId();
 
         if ($userId <= 0) {
@@ -40,6 +48,23 @@ abstract class BaseController extends Controller
         if (! $this->access->can($permission, 'view', $userId)) {
             abort(403, 'Access denied.');
         }
+    }
+
+    /**
+     * Check that there is an active, validated EVO manager session.
+     * Uses the session superglobal directly so we don't depend on any
+     * helper that might return cached values from a dead session.
+     *
+     * EVO sets 'mgrValidated' = 1 after a successful manager login
+     * and clears it on logout. Absence of this key (or a falsy value)
+     * means the user is not logged in as a manager. 'mgrInternalKey'
+     * is the EVO user id — required so the permission resolver has
+     * a real principal to check.
+     */
+    protected function isManagerAuthenticated(): bool
+    {
+        return ! empty($_SESSION['mgrValidated'])
+            && ! empty($_SESSION['mgrInternalKey']);
     }
 
     /**
