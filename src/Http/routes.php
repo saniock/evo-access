@@ -2,6 +2,7 @@
 
 use Illuminate\Support\Facades\Route;
 use Saniock\EvoAccess\Controllers\AuditController;
+use Saniock\EvoAccess\Controllers\DocsController;
 use Saniock\EvoAccess\Controllers\MatrixController;
 use Saniock\EvoAccess\Controllers\RolesController;
 use Saniock\EvoAccess\Controllers\UsersController;
@@ -53,4 +54,8 @@ Route::group([
     // Audit
     Route::get('audit', [AuditController::class, 'index'])->name('audit.index');
     Route::get('audit/data', [AuditController::class, 'data'])->name('audit.data');
+
+    // Docs
+    Route::get('docs', [DocsController::class, 'index'])->name('docs.index');
+    Route::get('docs/{section}', [DocsController::class, 'index'])->name('docs.section');
 });

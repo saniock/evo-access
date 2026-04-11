@@ -123,6 +123,11 @@ class EvoAccessServiceProvider extends ServiceProvider
                     'label'   => 'Access — audit log',
                     'actions' => ['view'],
                 ],
+                [
+                    'name'    => 'access.docs',
+                    'label'   => 'Access — documentation',
+                    'actions' => ['view'],
+                ],
             ]);
     }
 
