@@ -91,4 +91,25 @@ return [
 
     'web_user_whitelist' => [],
 
+    /*
+    |--------------------------------------------------------------------------
+    | Available UI locales
+    |--------------------------------------------------------------------------
+    |
+    | Locales that can be selected in the admin UI language picker. Keys
+    | are ISO codes (used for lang file lookup), values are display
+    | labels shown in the picker.
+    |
+    | The 'ua' → 'uk' alias is handled automatically in BaseController,
+    | so you don't need to list 'ua' here — list 'uk' instead even if
+    | your EVO project still uses 'ua' as its system locale.
+    |
+    */
+
+    'available_locales' => [
+        'uk' => 'Українська',
+        'en' => 'English',
+        'ru' => 'Русский',
+    ],
+
 ];

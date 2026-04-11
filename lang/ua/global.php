@@ -1,16 +1,9 @@
 <?php
 
-return [
-    'title'         => 'Доступи',
-    'nav.roles'     => 'Ролі',
-    'nav.matrix'    => 'Матриця дозволів',
-    'nav.users'     => 'Користувачі',
-    'nav.audit'     => 'Журнал',
-    'action.view'   => 'Перегляд',
-    'action.create' => 'Створення',
-    'action.update' => 'Редагування',
-    'action.delete' => 'Видалення',
-    'action.export' => 'Експорт',
-    'action.import' => 'Імпорт',
-    'action.bulk'   => 'Масові операції',
-];
+/*
+ * EVO currently uses 'ua' as its Ukrainian locale string, while the
+ * ISO standard is 'uk'. This file is a thin alias that delegates to
+ * the canonical uk/global.php so we only maintain one set of
+ * translations. Once EVO migrates to 'uk' this file can be removed.
+ */
+return require __DIR__ . '/../uk/global.php';
