@@ -64,17 +64,26 @@ class EvoAccessServiceProvider extends ServiceProvider
      * Bootstrap the package: migrations, views, translations, routes,
      * observers, console commands, EVO manager-menu plugin.
      *
-     * Routes/views/observers always run — the actual access control
-     * for the admin UI lives in BaseController::ensureAccess(),
-     * which 401/403's any caller without the relevant access.* permission.
+     * Routes/views/observers always run — two layers of access control
+     * protect the admin UI:
+     *
+     *   1. The route group in src/Http/routes.php uses EVO's
+     *      'managerauth' middleware, which 401s any request that
+     *      doesn't have a validated manager session BEFORE it reaches
+     *      any controller. This is the primary gate.
+     *
+     *   2. BaseController::ensureAccess() then checks that the
+     *      authenticated manager holds `view` on the page's
+     *      access.* permission, 403ing otherwise.
      *
      * The "soft rollout" gate sits inside the EVO manager-menu plugin
      * (plugins/evoAccessPlugin.php) and reads
      * config('evoAccess.web_user_whitelist') — only whitelisted EVO
      * user IDs see the new "Access" entry in the manager top menu, so
      * a half-finished package can ship alongside live managers without
-     * disturbing them. Empty whitelist = general rollout, everyone
-     * gets the menu entry.
+     * disturbing them. NOTE: this only hides the menu entry, not the
+     * routes — the routes are protected by managerauth + ensureAccess.
+     * Empty whitelist = general rollout, everyone sees the menu entry.
      */
     public function boot(): void
     {
