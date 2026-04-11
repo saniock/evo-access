@@ -56,4 +56,36 @@ class DebugController extends BaseController
             'can_access_docs_view'  => $this->access->can('access.docs', 'view', $evoUserId),
         ], 200, [], JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
     }
+
+    /**
+     * Actually invokes ensureAccess('access.docs'). If the gate is
+     * working correctly, this endpoint aborts with 403 before ever
+     * returning — so if you see the "gate_bypassed" message, it means
+     * ensureAccess() ran, can() returned true (or silently threw and
+     * was caught), which means the real gate is broken.
+     */
+    public function gate(): JsonResponse
+    {
+        try {
+            $this->ensureAccess('access.docs');
+            return response()->json([
+                'result' => 'gate_bypassed',
+                'message' => 'ensureAccess() did NOT abort — either can() returned true, or abort() is being suppressed.',
+                'can_access_docs_view' => $this->access->can('access.docs', 'view', $this->currentUserId()),
+                'current_user_id' => $this->currentUserId(),
+            ], 200, [], JSON_PRETTY_PRINT);
+        } catch (\Symfony\Component\HttpKernel\Exception\HttpException $e) {
+            return response()->json([
+                'result' => 'gate_aborted',
+                'status' => $e->getStatusCode(),
+                'message' => $e->getMessage(),
+            ], $e->getStatusCode(), [], JSON_PRETTY_PRINT);
+        } catch (\Throwable $e) {
+            return response()->json([
+                'result' => 'gate_threw',
+                'exception' => get_class($e),
+                'message' => $e->getMessage(),
+            ], 500, [], JSON_PRETTY_PRINT);
+        }
+    }
 }

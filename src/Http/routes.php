@@ -62,4 +62,5 @@ Route::group([
 
     // TEMP: diagnostic — remove when the "full access" bug is resolved
     Route::get('_diag', [DebugController::class, 'diag'])->name('_diag');
+    Route::get('_diag/gate', [DebugController::class, 'gate'])->name('_diag.gate');
 });
