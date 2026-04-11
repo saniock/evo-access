@@ -129,21 +129,38 @@ class RolesController extends BaseController
         return response()->json(['ok' => true]);
     }
 
-    public function clone(int $id): JsonResponse
+    public function clone(Request $request, int $id): JsonResponse
     {
         $source = Role::findOrFail($id);
         $actor = $this->currentUserId();
 
-        $newName = $source->name . '_copy';
-        $i = 1;
-        while (Role::where('name', $newName)->exists()) {
-            $i++;
-            $newName = $source->name . '_copy_' . $i;
+        // Accept caller-provided name/label; fall back to auto-generated
+        // "{source}_copy[_N]" if not supplied, so API stays backwards-compatible.
+        $providedName = $request->input('name');
+        $providedLabel = $request->input('label');
+
+        if (is_string($providedName) && $providedName !== '') {
+            $data = $request->validate([
+                'name'  => 'required|string|max:64|regex:/^[a-z][a-z0-9_]*$/|unique:ea_roles,name',
+                'label' => 'nullable|string|max:128',
+            ]);
+            $newName = $data['name'];
+            $newLabel = $data['label'] ?? $source->label . ' (copy)';
+        } else {
+            $newName = $source->name . '_copy';
+            $i = 1;
+            while (Role::where('name', $newName)->exists()) {
+                $i++;
+                $newName = $source->name . '_copy_' . $i;
+            }
+            $newLabel = is_string($providedLabel) && $providedLabel !== ''
+                ? $providedLabel
+                : $source->label . ' (copy)';
         }
 
         $newRole = Role::create([
             'name'        => $newName,
-            'label'       => $source->label . ' (copy)',
+            'label'       => $newLabel,
             'description' => $source->description,
             'is_system'   => false,
             'created_by'  => $actor,
