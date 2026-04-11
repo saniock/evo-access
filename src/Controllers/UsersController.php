@@ -19,7 +19,7 @@ class UsersController extends BaseController
     public function __construct(AccessService $access)
     {
         parent::__construct($access);
-        $this->ensureAccess('access.users');
+        // Permission check lives in the eaaccess.permission route middleware.
     }
 
     public function index()

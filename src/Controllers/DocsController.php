@@ -10,7 +10,7 @@ class DocsController extends BaseController
     public function __construct(AccessService $access)
     {
         parent::__construct($access);
-        $this->ensureAccess('access.docs');
+        // Permission check lives in the eaaccess.permission route middleware.
     }
 
     /**

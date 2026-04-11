@@ -106,6 +106,8 @@ class EvoAccessServiceProvider extends ServiceProvider
             'evoAccess'
         );
 
+        $this->registerRouteMiddleware();
+
         $this->loadRoutesFrom(__DIR__ . '/Http/routes.php');
 
         $this->loadEvoManagerPlugin();
@@ -165,6 +167,28 @@ class EvoAccessServiceProvider extends ServiceProvider
             /** @var Request $this */
             return Validator::make($this->all(), $rules, $messages, $customAttributes)->validate();
         });
+    }
+
+    /**
+     * Register the per-permission route middleware so routes.php can
+     * reference it as a string alias:
+     *     ->middleware('eaaccess.permission:access.users')
+     *
+     * Aliased here (rather than in the consumer's HTTP kernel) because
+     * evo-access ships its own routes and the consumer shouldn't need
+     * to touch kernel config to protect the admin UI.
+     */
+    private function registerRouteMiddleware(): void
+    {
+        $router = $this->app['router'] ?? null;
+        if ($router === null) {
+            return;
+        }
+
+        $router->aliasMiddleware(
+            'eaaccess.permission',
+            \Saniock\EvoAccess\Http\Middleware\AccessGate::class,
+        );
     }
 
     /**

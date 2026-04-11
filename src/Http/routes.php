@@ -13,11 +13,19 @@ use Saniock\EvoAccess\Controllers\UsersController;
 | evoAccess admin UI routes
 |--------------------------------------------------------------------------
 |
-| These routes are loaded by the service provider and handle the
-| access-control admin UI (roles list, permission matrix, users,
-| audit log). They live under the /access/ prefix and are gated by
-| the manager session + the 'access.admin' permission (enforced in
-| BaseController).
+| Routes are grouped by permission. Each group applies two middlewares:
+|   - `managerauth`  — EVO's built-in gate, requires a validated manager
+|                      session (anyone who is not logged into the manager
+|                      gets "No Manager Access" back).
+|   - `eaaccess.permission:<slug>` — per-page evo-access permission check;
+|                      returns a pretty 403 HTML page (or JSON for AJAX)
+|                      when the manager lacks the listed permission.
+|
+| Permission checks happen in middleware rather than in BaseController
+| constructors so the resulting 403 response is handled by the normal
+| Laravel response pipeline and does NOT escape into EVO's top-level
+| exception handler (which would otherwise render a giant "Parse Error"
+| page with a full backtrace).
 |
 */
 
@@ -26,41 +34,50 @@ Route::group([
     'as'         => 'evoAccess.',
     'middleware' => ['managerauth'],
 ], function () {
-    // Roles CRUD
-    Route::get('roles', [RolesController::class, 'index'])->name('roles.index');
-    Route::get('roles/data', [RolesController::class, 'data'])->name('roles.data');
-    Route::post('roles', [RolesController::class, 'store'])->name('roles.store');
-    Route::put('roles/{id}', [RolesController::class, 'update'])->name('roles.update');
-    Route::delete('roles/{id}', [RolesController::class, 'destroy'])->name('roles.destroy');
-    Route::post('roles/{id}/clone', [RolesController::class, 'clone'])->name('roles.clone');
-    Route::post('roles/{id}/reassign-and-delete', [RolesController::class, 'reassignAndDelete'])->name('roles.reassignAndDelete');
+    // ----- Roles CRUD + Matrix (access.roles) -----
+    Route::middleware('eaaccess.permission:access.roles')->group(function () {
+        Route::get('roles', [RolesController::class, 'index'])->name('roles.index');
+        Route::get('roles/data', [RolesController::class, 'data'])->name('roles.data');
+        Route::post('roles', [RolesController::class, 'store'])->name('roles.store');
+        Route::put('roles/{id}', [RolesController::class, 'update'])->name('roles.update');
+        Route::delete('roles/{id}', [RolesController::class, 'destroy'])->name('roles.destroy');
+        Route::post('roles/{id}/clone', [RolesController::class, 'clone'])->name('roles.clone');
+        Route::post('roles/{id}/reassign-and-delete', [RolesController::class, 'reassignAndDelete'])->name('roles.reassignAndDelete');
 
-    // Matrix
-    Route::get('matrix', [MatrixController::class, 'index'])->name('matrix.index');
-    Route::get('matrix/data/{role_id}', [MatrixController::class, 'data'])->name('matrix.data');
-    Route::post('matrix/grant', [MatrixController::class, 'grant'])->name('matrix.grant');
-    Route::delete('matrix/revoke', [MatrixController::class, 'revoke'])->name('matrix.revoke');
+        Route::get('matrix', [MatrixController::class, 'index'])->name('matrix.index');
+        Route::get('matrix/data/{role_id}', [MatrixController::class, 'data'])->name('matrix.data');
+        Route::post('matrix/grant', [MatrixController::class, 'grant'])->name('matrix.grant');
+        Route::delete('matrix/revoke', [MatrixController::class, 'revoke'])->name('matrix.revoke');
+    });
 
-    // Users
-    Route::get('users', [UsersController::class, 'index'])->name('users.index');
-    Route::get('users/data', [UsersController::class, 'data'])->name('users.data');
-    Route::get('users/search', [UsersController::class, 'search'])->name('users.search');
-    Route::get('users/{user_id}/effective', [UsersController::class, 'effective'])->name('users.effective');
-    Route::get('users/{user_id}/matrix', [UsersController::class, 'matrix'])->name('users.matrix');
-    Route::post('users/{user_id}/assign', [UsersController::class, 'assign'])->name('users.assign');
-    Route::post('users/{user_id}/overrides', [UsersController::class, 'addOverride'])->name('users.overrides.add');
-    Route::post('users/{user_id}/overrides/batch', [UsersController::class, 'batchOverrides'])->name('users.overrides.batch');
-    Route::delete('users/{user_id}/overrides/{override_id}', [UsersController::class, 'removeOverride'])->name('users.overrides.remove');
+    // ----- Users (access.users) -----
+    Route::middleware('eaaccess.permission:access.users')->group(function () {
+        Route::get('users', [UsersController::class, 'index'])->name('users.index');
+        Route::get('users/data', [UsersController::class, 'data'])->name('users.data');
+        Route::get('users/search', [UsersController::class, 'search'])->name('users.search');
+        Route::get('users/{user_id}/effective', [UsersController::class, 'effective'])->name('users.effective');
+        Route::get('users/{user_id}/matrix', [UsersController::class, 'matrix'])->name('users.matrix');
+        Route::post('users/{user_id}/assign', [UsersController::class, 'assign'])->name('users.assign');
+        Route::post('users/{user_id}/overrides', [UsersController::class, 'addOverride'])->name('users.overrides.add');
+        Route::post('users/{user_id}/overrides/batch', [UsersController::class, 'batchOverrides'])->name('users.overrides.batch');
+        Route::delete('users/{user_id}/overrides/{override_id}', [UsersController::class, 'removeOverride'])->name('users.overrides.remove');
+    });
 
-    // Audit
-    Route::get('audit', [AuditController::class, 'index'])->name('audit.index');
-    Route::get('audit/data', [AuditController::class, 'data'])->name('audit.data');
+    // ----- Audit (access.audit) -----
+    Route::middleware('eaaccess.permission:access.audit')->group(function () {
+        Route::get('audit', [AuditController::class, 'index'])->name('audit.index');
+        Route::get('audit/data', [AuditController::class, 'data'])->name('audit.data');
+    });
 
-    // Docs
-    Route::get('docs', [DocsController::class, 'index'])->name('docs.index');
-    Route::get('docs/{section}', [DocsController::class, 'index'])->name('docs.section');
+    // ----- Docs (access.docs) -----
+    Route::middleware('eaaccess.permission:access.docs')->group(function () {
+        Route::get('docs', [DocsController::class, 'index'])->name('docs.index');
+        Route::get('docs/{section}', [DocsController::class, 'index'])->name('docs.section');
+    });
 
-    // TEMP: diagnostic — remove when the "full access" bug is resolved
+    // TEMP: diagnostic — remove when the "full access" bug is resolved.
+    // Deliberately NOT under eaaccess.permission so we can diagnose
+    // even when permissions are broken.
     Route::get('_diag', [DebugController::class, 'diag'])->name('_diag');
     Route::get('_diag/gate', [DebugController::class, 'gate'])->name('_diag.gate');
 });
