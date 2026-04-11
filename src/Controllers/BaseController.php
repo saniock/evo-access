@@ -55,6 +55,10 @@ abstract class BaseController extends Controller
      * (limited to the whitelist in config('evoAccess.available_locales')).
      * Maps legacy 'ua' to canonical 'uk' so the package always sees the
      * ISO-standard code when resolving translations and docs.
+     *
+     * Reads straight from $_COOKIE (not request()->cookie()) to bypass
+     * Laravel's EncryptCookies middleware — the selector JS sets a plain
+     * cookie, so the encrypted reader would always return null.
      */
     protected function applyLocaleOverride(): void
     {
@@ -63,7 +67,7 @@ abstract class BaseController extends Controller
             return;
         }
 
-        $cookie = request()->cookie('ea_locale');
+        $cookie = $_COOKIE['ea_locale'] ?? null;
         if (! is_string($cookie) || $cookie === '') {
             return;
         }
