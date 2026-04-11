@@ -23,7 +23,7 @@ use Saniock\EvoAccess\Controllers\UsersController;
 Route::group([
     'prefix'     => 'access',
     'as'         => 'evoAccess.',
-    'middleware' => ['web'],
+    'middleware' => ['managerauth'],
 ], function () {
     // Roles CRUD
     Route::get('roles', [RolesController::class, 'index'])->name('roles.index');
