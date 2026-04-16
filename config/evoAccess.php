@@ -28,10 +28,17 @@ return [
     |
     */
 
+    /*
+    | Recommended action vocabulary. Modules are free to declare any
+    | lowercase snake_case slugs (matches /^[a-z][a-z0-9_]*$/), but
+    | keeping to this list keeps the matrix UI consistent across modules.
+    | Translation strings are pre-shipped for every entry in lang/{locale}/global.php
+    | under the "action" key.
+    */
     'standard_actions' => [
         'view',
         'create',
-        'update',
+        'edit',
         'delete',
         'export',
         'import',
