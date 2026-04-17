@@ -3,6 +3,7 @@
 namespace Saniock\EvoAccess\Console;
 
 use Illuminate\Console\Command;
+use Illuminate\Support\Str;
 use Saniock\EvoAccess\Services\AuditLogger;
 use Saniock\EvoAccess\Services\PermissionCatalog;
 use Saniock\EvoAccess\Services\PermissionParsers\ParserRegistry;
@@ -85,7 +86,12 @@ class SyncPermissionsCommand extends Command
         $this->line("[{$parserName}] scanning {$path}/{$glob}");
 
         foreach ($files as $file) {
-            $moduleSlug = strtolower(basename(dirname($file, 2)));
+            // Str::kebab converts PascalCase directory names to the
+            // slug format evo-access permissions use:
+            //   ContentHub → content-hub
+            //   NovaPoshta → nova-poshta
+            //   Competitors → competitors  (already lowercase, no change)
+            $moduleSlug = Str::kebab(basename(dirname($file, 2)));
 
             /** @noinspection PhpIncludeInspection */
             $config = require $file;
