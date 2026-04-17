@@ -136,9 +136,11 @@ class PermissionCatalog implements PermissionCatalogInterface
 
     private function validateModuleSlug(string $module): void
     {
-        if (!preg_match('/^[a-z][a-z0-9_]*$/', $module) || strlen($module) > 64) {
+        // Allow dashes in module slugs so Str::kebab() output from
+        // PascalCase directory names is valid: content-hub, nova-poshta, etc.
+        if (!preg_match('/^[a-z][a-z0-9_\-]*$/', $module) || strlen($module) > 64) {
             throw new \InvalidArgumentException(
-                "Invalid module slug '$module' — must match ^[a-z][a-z0-9_]*$ and be ≤64 chars"
+                "Invalid module slug '$module' — must match ^[a-z][a-z0-9_-]*$ and be ≤64 chars"
             );
         }
     }
