@@ -154,6 +154,7 @@ return [
         'delete' => 'Delete',
         'export' => 'Export',
         'import' => 'Import',
-        'bulk'   => 'Bulk',
+        'bulk'       => 'Bulk',
+        'manage_all' => 'Manage all',
     ],
 ];
