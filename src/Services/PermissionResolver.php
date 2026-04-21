@@ -90,10 +90,12 @@ class PermissionResolver
      * Load the full [permission => [action => bool]] map for a user.
      *
      * Resolution:
-     *   1. Look up user's role in ea_user_roles
+     *   1. Look up user's role in ea_user_roles (may be absent)
      *   2. Short-circuit if role is_system → ['__is_system' => true]
      *   3. Fetch role grants from ea_role_permission_actions (non-orphaned)
+     *      — only if the user has a role assigned
      *   4. Fetch user overrides from ea_user_overrides (non-orphaned)
+     *      — ALWAYS, independent of role presence
      *   5. Merge: role grants + override grants first, then revokes (revoke wins)
      *   6. Cache and return
      *
@@ -106,29 +108,35 @@ class PermissionResolver
         }
 
         $userRole = DB::table('ea_user_roles')->where('user_id', $userId)->first();
-        if (!$userRole) {
-            return $this->cache[$userId] = [];
-        }
+        $roleId = $userRole->role_id ?? null;
 
-        $role = DB::table('ea_roles')->where('id', $userRole->role_id)->first();
-        if ($role && (int) $role->is_system === 1) {
-            return $this->cache[$userId] = ['__is_system' => true];
+        if ($roleId !== null) {
+            $role = DB::table('ea_roles')->where('id', $roleId)->first();
+            if ($role && (int) $role->is_system === 1) {
+                return $this->cache[$userId] = ['__is_system' => true];
+            }
         }
-
-        // Load role grants (skip orphaned permissions)
-        $roleGrants = DB::table('ea_role_permission_actions as rpa')
-            ->join('ea_permissions as p', 'p.id', '=', 'rpa.permission_id')
-            ->where('rpa.role_id', $userRole->role_id)
-            ->where('p.is_orphaned', false)
-            ->select('p.name as permission', 'rpa.action')
-            ->get();
 
         $map = [];
-        foreach ($roleGrants as $row) {
-            $map[$row->permission][$row->action] = true;
+
+        // Role grants — only when the user has a role. A user without a role
+        // can still have explicit overrides (below), so we do NOT early-return
+        // when $roleId is null.
+        if ($roleId !== null) {
+            $roleGrants = DB::table('ea_role_permission_actions as rpa')
+                ->join('ea_permissions as p', 'p.id', '=', 'rpa.permission_id')
+                ->where('rpa.role_id', $roleId)
+                ->where('p.is_orphaned', false)
+                ->select('p.name as permission', 'rpa.action')
+                ->get();
+
+            foreach ($roleGrants as $row) {
+                $map[$row->permission][$row->action] = true;
+            }
         }
 
-        // Apply user overrides — grants first, then revokes (revoke always wins)
+        // User overrides — always applied, even when the user has no role.
+        // Grants first, then revokes (revoke always wins on collision).
         $overrides = DB::table('ea_user_overrides as uo')
             ->join('ea_permissions as p', 'p.id', '=', 'uo.permission_id')
             ->where('uo.user_id', $userId)
